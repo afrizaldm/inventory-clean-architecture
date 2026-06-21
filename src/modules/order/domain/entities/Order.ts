@@ -1,33 +1,44 @@
-import { Money } from '../../../inventory/domain/value-objects/Money';
+/**
+ * ============================================================================
+ * ORDER MODULE - Order Entity
+ * ============================================================================
+ * Entity untuk merepresentasikan order/pesanan.
+ * 
+ * ENTITY KARAKTERISTIK:
+ * 1. Memiliki identity (ID) unik
+ * 2. Memiliki lifecycle (pending -> confirmed -> shipped -> delivered)
+ * 3. Mengandung business logic terkait order
+ * 
+ * DOMAIN LAYER - TIDAK BOLEH IMPORT DARI LUAR DOMAIN!
+ */
+
+import { Money } from '../../inventory/domain/value-objects/Money';
 
 /**
- * Interface untuk Order Item
- * 
- * Order Item merepresentasikan satu item dalam order.
- * Menggunakan Value Object Money untuk price.
+ * Interface untuk item dalam order
  */
 export interface IOrderItem {
-  /** ID produk yang diorder */
+  /** ID produk yang dipesan */
   productId: string;
   /** Nama produk (snapshot saat order dibuat) */
   productName: string;
-  /** Jumlah item yang diorder */
+  /** Jumlah yang dipesan */
   quantity: number;
-  /** Harga per unit */
+  /** Harga per unit saat order dibuat */
   unitPrice: Money;
 }
 
 /**
- * Interface untuk properties Order
+ * Interface untuk props constructor Order
  */
 export interface IOrderProps {
   /** ID unik order */
   id: string;
   /** ID customer yang membuat order */
   customerId: string;
-  /** List item yang diorder */
+  /** Item-item yang dipesan */
   items: IOrderItem[];
-  /** Total amount */
+  /** Total harga semua item */
   totalAmount: Money;
   /** Status order */
   status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
@@ -36,33 +47,26 @@ export interface IOrderProps {
 }
 
 /**
- * Entity: Order
- * 
- * Entity Order merepresentasikan order dari customer.
- * Mengandung business logic untuk state machine order:
- * pending -> confirmed -> shipped -> delivered
- * 
- * Order bisa dibatalkan (cancelled) kecuali sudah delivered.
+ * Order Entity Class
+ * Merepresentasikan pesanan dari customer
  */
 export class Order {
-  /** ID unik order - readonly */
+  /** ID unik order (immutable) */
   public readonly id: string;
   
-  /** ID customer - readonly */
+  /** ID customer (immutable) */
   public readonly customerId: string;
   
-  /** List item - readonly array copy */
+  /** List items yang dipesan (immutable copy) */
   public readonly items: IOrderItem[];
   
-  /** Total amount - readonly */
+  /** Total amount (immutable) */
   public readonly totalAmount: Money;
   
-  /** Waktu order dibuat - readonly */
+  /** Waktu order dibuat (immutable) */
   public readonly createdAt: Date;
   
-  /**
-   * Status order - private karena hanya bisa diubah melalui method
-   */
+  /** Status order - private karena bisa berubah */
   private _status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
 
   /**
@@ -72,7 +76,7 @@ export class Order {
   constructor(props: IOrderProps) {
     this.id = props.id;
     this.customerId = props.customerId;
-    // Copy array untuk mencegah external mutation
+    // Buat copy array untuk prevent external mutation
     this.items = [...props.items];
     this.totalAmount = props.totalAmount;
     this.createdAt = props.createdAt;
@@ -88,9 +92,9 @@ export class Order {
 
   /**
    * Confirm order
-   * Business Rule: Hanya order dengan status pending yang bisa di-confirm
+   * BUSINESS RULE: Hanya order dengan status 'pending' yang bisa di-confirm
    * 
-   * @throws Error jika status bukan pending
+   * @throws Error jika status tidak valid untuk confirm
    */
   confirm(): void {
     if (this._status !== 'pending') {
@@ -101,9 +105,9 @@ export class Order {
 
   /**
    * Ship order
-   * Business Rule: Hanya order dengan status confirmed yang bisa di-ship
+   * BUSINESS RULE: Hanya order dengan status 'confirmed' yang bisa di-ship
    * 
-   * @throws Error jika status bukan confirmed
+   * @throws Error jika status tidak valid untuk ship
    */
   ship(): void {
     if (this._status !== 'confirmed') {
@@ -114,9 +118,9 @@ export class Order {
 
   /**
    * Deliver order
-   * Business Rule: Hanya order dengan status shipped yang bisa di-deliver
+   * BUSINESS RULE: Hanya order dengan status 'shipped' yang bisa di-deliver
    * 
-   * @throws Error jika status bukan shipped
+   * @throws Error jika status tidak valid untuk deliver
    */
   deliver(): void {
     if (this._status !== 'shipped') {
@@ -127,14 +131,22 @@ export class Order {
 
   /**
    * Cancel order
-   * Business Rule: Order yang sudah delivered tidak bisa dibatalkan
+   * BUSINESS RULE: Order yang sudah delivered tidak bisa di-cancel
    * 
-   * @throws Error jika status sudah delivered
+   * @throws Error jika order sudah delivered
    */
   cancel(): void {
     if (this._status === 'delivered') {
-      throw new Error(`Cannot cancel delivered order`);
+      throw new Error('Cannot cancel delivered order');
     }
     this._status = 'cancelled';
+  }
+
+  /**
+   * Cek apakah order bisa di-cancel
+   * @returns true jika order bisa di-cancel
+   */
+  canBeCancelled(): boolean {
+    return this._status !== 'delivered';
   }
 }

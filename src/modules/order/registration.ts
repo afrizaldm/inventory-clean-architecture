@@ -1,44 +1,35 @@
+/**
+ * ============================================================================
+ * ORDER MODULE - Registration
+ * ============================================================================
+ * Mendaftarkan semua dependencies dari Order Module ke DI Container.
+ */
+
 import { Container } from '../../bootstrap/container';
 import { IOrderRepository } from './domain/repositories/IOrderRepository';
 import { OrderRepository } from './infrastructure/repositories/OrderRepository';
 import { CreateOrderUseCase } from './application/use-cases/CreateOrderUseCase';
 
 /**
- * Registrasi Order Module Dependencies
+ * Registrasi semua Order module dependencies
+ * @param container - DI Container instance
  * 
- * Function ini mendaftarkan semua dependencies yang dimiliki oleh modul Order.
+ * DEPENDENCIES YANG DIREGISTRASI:
+ * 1. IOrderRepository -> OrderRepository (Singleton)
+ * 2. CreateOrderUseCase (Transient via factory)
  * 
- * Perhatikan bahwa CreateOrderUseCase membutuhkan dependencies dari modul Inventory:
- * - IInventoryChecker (untuk cek stock)
- * - ReduceStockUseCase (untuk kurangi stock)
- * 
- * Dependencies cross-module ini akan di-wire di Composition Root.
+ * CATATAN: CreateOrderUseCase butuh cross-module dependencies
+ * yang di-wiring secara manual di Composition Root
  */
 export function registerOrderModule(container: Container): void {
-  console.log('=== Registering Order Module ===');
-  
-  // ============================================
-  // Register Repositories (Singleton)
-  // ============================================
-  // OrderRepository harus singleton untuk konsistensi data
+  console.log('[Registration] Registering Order module dependencies...');
+
+  // ========== REPOSITORIES ==========
   container.registerSingleton<IOrderRepository>('IOrderRepository', OrderRepository);
+
+  // ========== USE CASES ==========
+  // CreateOrderUseCase akan di-register dengan factory di main.ts
+  // karena butuh cross-module dependencies yang kompleks
   
-  // ============================================
-  // Register Use Cases (Transient)
-  // ============================================
-  // CreateOrderUseCase memiliki dependencies kompleks termasuk cross-module dependencies
-  // Factory registration digunakan untuk specify semua dependencies secara eksplisit
-  
-  container.registerFactory(
-    'CreateOrderUseCase',
-    (
-      orderRepo: IOrderRepository,
-      inventoryChecker: any,
-      reduceStockUseCase: any,
-      eventBus: any
-    ) => new CreateOrderUseCase(orderRepo, inventoryChecker, reduceStockUseCase, eventBus),
-    ['IOrderRepository', 'IInventoryChecker', 'ReduceStockUseCase', 'IEventBus']
-  );
-  
-  console.log('=== Order Module Registered ===\n');
+  console.log('[Registration] Order module base dependencies registered successfully');
 }

@@ -2,36 +2,26 @@
 # Dependencies
 node_modules/
 
-# Build outputs
+# Build artifacts
 dist/
-build/
-target/
 
-# TypeScript/JavaScript
-*.js.map
-*.tsbuildinfo
-.nyc_output/
-coverage/
-
-# Environment variables
+# Environment
 .env
 .env.local
-*.env.*
+.env.*
 
-# IDE files
+# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*.tmp
 
 # Logs
 *.log
 
-# OS generated files
-.DS_Store
-Thumbs.db
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
-# Package manager
-package-lock.json
+# TypeScript
+*.tsbuildinfo
 ```

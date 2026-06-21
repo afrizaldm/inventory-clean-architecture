@@ -1,345 +1,178 @@
-# 🏗️ Hexagonal/Clean Architecture + Modular Monolith
+# 📚 Panduan Belajar Hexagonal/Clean Architecture + Modular Monolith
 
-Implementasi lengkap **Hexagonal Architecture** (Ports & Adapters) dengan pendekatan **Modular Monolith** menggunakan TypeScript. Project ini dirancang untuk **pembelajaran** konsep arsitektur tingkat lanjut.
-
-## 📋 Daftar Isi
-
-- [Konsep Utama](#-konsep-utama)
-- [Struktur Project](#-struktur-project)
-- [Penjelasan Arsitektur](#-penjelasan-arsitektur)
-- [Cara Menjalankan](#-cara-menjalankan)
-- [Demo Flow](#-demo-flow)
-- [Key Learnings](#-key-learnings)
+Implementasi lengkap **Hexagonal Architecture** (Ports & Adapters) dengan pendekatan **Modular Monolith** menggunakan TypeScript.
 
 ---
 
-## 🎯 Konsep Utama
+## 🎯 Tujuan Pembelajaran
 
-### 1. Hexagonal Architecture (Ports & Adapters)
+Proyek ini dirancang untuk memahami:
 
-```
-                    ┌─────────────────┐
-                    │   HTTP Request  │ ← Driving Adapter (Primary)
-                    └────────┬────────┘
-                             │
-                    ┌────────▼────────┐
-                    │   Use Cases     │ ← Application Layer
-                    │  (Application   │
-                    │    Services)    │
-                    └────────┬────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        │                    │                    │
-┌───────▼───────┐   ┌───────▼───────┐   ┌───────▼───────┐
-│   Domain      │   │   Domain      │   │   Domain      │
-│   Entities    │   │   Value Obj   │   │   Events      │
-│               │   │               │   │               │
-└───────┬───────┘   └───────────────┘   └───────────────┘
-        │
-        │         Domain Layer (Business Logic)
-        │         TIDAK bergantung pada framework/database
-        │
-┌───────▼───────┐
-│  Repository   │ ← Port (Interface)
-│  Interface    │
-└───────┬───────┘
-        │
-┌───────▼───────┐
-│  Repository   │ ← Driven Adapter (Secondary)
-│  Implementation│  (In-memory / Database)
-└───────────────┘
-```
-
-**Karakteristik:**
-- **Domain Layer** di tengah, tidak bergantung pada apapun
-- **Driving Adapters** (HTTP, CLI) memanggil Use Cases
-- **Driven Adapters** (Database, External APIs) diimplementasikan di Infrastructure
-
-### 2. Modular Monolith
-
-```
-src/
-├── modules/
-│   ├── inventory/     # Modul Inventory (bounded context)
-│   │   ├── domain/
-│   │   ├── application/
-│   │   ├── infrastructure/
-│   │   └── contracts/
-│   └── order/         # Modul Order (bounded context)
-│       ├── domain/
-│       ├── application/
-│       ├── infrastructure/
-│       ├── contracts/
-│       └── registration.ts
-└── shared/            # Shared kernel (infrastructure bersama)
-```
-
-**Prinsip:**
-- Setiap modul **mandiri** dan punya domain sendiri
-- Modul **tidak boleh** import langsung dari modul lain
-- Komunikasi antar modul via **interface** (contracts)
-- Wiring dilakukan di **Composition Root**
-
-### 3. Dependency Inversion Principle (SOLID-D)
-
-```typescript
-// ❌ SALAH: Modul Order bergantung langsung pada Inventory Module
-import { ProductRepository } from '../inventory/...';
-
-// ✅ BENAR: Modul Order bergantung pada interface
-import { IInventoryChecker } from './contracts/IInventoryChecker';
-// Implementasi di-wire di Composition Root
-```
+1. **Dependency Inversion Principle (DIP)** - Bagaimana bergantung pada abstraksi, bukan implementasi
+2. **Pemisahan Registry dan Container** - Bagaimana DI Container bekerja dari scratch
+3. **Komunikasi Antar Modul** - Bagaimana modul berkomunikasi tanpa coupling langsung
+4. **Driving & Driven Adapters** - Bagaimana HTTP request dan Event diintegrasikan
+5. **Composition Root Pattern** - Bagaimana mengorkestrasi seluruh aplikasi
 
 ---
 
-## 📁 Struktur Project
+## 📁 Struktur Proyek
 
 ```
 src/
-├── bootstrap/                    # 🎼 COMPOSITION ROOT
-│   ├── main.ts                   # Entry point, wiring semua dependencies
-│   └── container.ts              # DI Container implementation
+├── bootstrap/                    # COMPOSITION ROOT - Entry Point Aplikasi
+│   ├── main.ts                   # Aplikasi entry point & HTTP server setup
+│   └── container.ts              # DI Container implementation (dari scratch!)
 │
-├── modules/
-│   ├── inventory/                # 📦 MODUL INVENTORY
-│   │   ├── domain/               #   Domain Layer (business logic murni)
-│   │   │   ├── entities/         #     Product entity
-│   │   │   ├── value-objects/    #     Quantity, Money
-│   │   │   ├── events/           #     ProductStockReduced event
-│   │   │   └── repositories/     #     IProductRepository (interface)
-│   │   ├── application/          #   Application Layer (use cases)
-│   │   │   └── use-cases/        #     CreateProduct, ReduceStock
-│   │   ├── infrastructure/       #   Infrastructure Layer (adapters)
-│   │   │   ├── repositories/     #     ProductRepository (implementation)
-│   │   │   ├── adapters/         #     InventoryCheckerAdapter
-│   │   │   └── event-handlers/   #     ProductStockReducedHandler
-│   │   └── registration.ts       #   Module dependency registration
+├── modules/                      # MODULAR MONOLITH - Business Modules
 │   │
-│   └── order/                    # 🛒 MODUL ORDER
+│   ├── inventory/                # Modul Inventory (Manajemen Produk & Stock)
+│   │   ├── domain/               # DOMAIN LAYER - Business Logic Murni
+│   │   │   ├── entities/         # Product Entity
+│   │   │   ├── value-objects/    # Quantity, Money (immutable objects)
+│   │   │   ├── events/           # ProductStockReduced Domain Event
+│   │   │   └── repositories/     # IProductRepository (INTERFACE/PORT)
+│   │   │
+│   │   ├── application/          # APPLICATION LAYER - Use Cases
+│   │   │   └── use-cases/        # CreateProductUseCase, ReduceStockUseCase
+│   │   │
+│   │   ├── infrastructure/       # INFRASTRUCTURE LAYER - Implementations
+│   │   │   ├── repositories/     # ProductRepository (implementasi in-memory)
+│   │   │   ├── adapters/         # InventoryCheckerAdapter (cross-module!)
+│   │   │   └── event-handlers/   # ProductStockReducedHandler
+│   │   │
+│   │   ├── contracts/            # Public interfaces untuk modul lain
+│   │   └── registration.ts       # Dependency registration untuk modul ini
+│   │
+│   └── order/                    # Modul Order (Manajemen Pesanan)
 │       ├── domain/
-│       │   ├── entities/         #   Order entity
-│       │   ├── events/           #   OrderCreated event
-│       │   └── repositories/     #   IOrderRepository (interface)
+│       │   ├── entities/         # Order Entity
+│       │   ├── events/           # OrderCreated Domain Event
+│       │   └── repositories/     # IOrderRepository (INTERFACE/PORT)
+│       │
 │       ├── application/
-│       │   └── use-cases/        #   CreateOrderUseCase
+│       │   └── use-cases/        # CreateOrderUseCase
+│       │
 │       ├── infrastructure/
-│       │   ├── repositories/     #   OrderRepository
-│       │   └── event-handlers/   #   OrderCreatedHandler
-│       ├── contracts/            #   📜 Interfaces untuk modul lain
-│       │   └── IInventoryChecker.ts
-│       └── registration.ts
+│       │   ├── repositories/     # OrderRepository (implementasi in-memory)
+│       │   └── event-handlers/   # OrderCreatedHandler
+│       │
+│       ├── contracts/            # IInventoryChecker (interface untuk inventory)
+│       └── registration.ts       # Dependency registration untuk modul ini
 │
-├── shared/                       # 🔧 SHARED INFRASTRUCTURE
-│   ├── kernel/                   #   Shared interfaces
-│   │   ├── IRepository.ts
-│   │   └── IEventBus.ts
-│   ├── infrastructure/
+├── shared/                       # SHARED KERNEL - Common Infrastructure
+│   ├── kernel/                   # Shared interfaces
+│   │   ├── IRepository.ts        # Generic repository interface
+│   │   └── IEventBus.ts          # Event bus interface
+│   │
+│   ├── infrastructure/           # Shared implementations
 │   │   └── services/
-│   │       ├── EventBus.ts
-│   │       └── Logger.ts
-│   └── registration.ts
+│   │       ├── EventBus.ts       # Pub/sub event bus
+│   │       └── Logger.ts         # Logging service
+│   │
+│   └── registration.ts           # Shared dependencies registration
 │
-└── types/                        # 📝 Global type definitions
-    └── index.ts
+└── types/                        # Global type definitions
+    └── index.ts                  # IUseCase, IEventHandler, IDomainEvent
 ```
 
 ---
 
-## 🔍 Penjelasan Arsitektur
+## 🔑 Konsep Inti yang Harus Dipahami
 
-### 1. Bagaimana Registry dan Container Bekerja
+### 1. Dependency Rule (Clean Architecture)
 
-#### Registry (Pencatatan)
-Setiap modul memiliki file `registration.ts` yang **mendaftarkan** dependencies:
+```
+┌─────────────────────────────────────┐
+│         INFRASTRUCTURE              │  ← Paling Luar (Framework, DB, UI)
+│  ┌───────────────────────────────┐  │
+│  │        APPLICATION            │  │  ← Use Cases, Application Services
+│  │  ┌─────────────────────────┐  │  │
+│  │  │         DOMAIN          │  │  │  ← Entities, Value Objects, Events
+│  │  │    (BUSINESS LOGIC)     │  │  │
+│  │  └─────────────────────────┘  │  │
+│  └───────────────────────────────┘  │
+└─────────────────────────────────────┘
+```
+
+**ATURAN EMAS:** 
+- Kode di dalam **HANYA BOLEH** bergantung pada kode di lapisan lebih dalam
+- Domain layer **TIDAK BOLEH** import dari application atau infrastructure
+- Infrastructure layer **HARUS** implement interfaces dari domain layer
+
+### 2. Ports & Adapters (Hexagonal Architecture)
+
+```
+                    ┌──────────────────┐
+                    │  DRIVING ADAPTER │  ← Input: HTTP, CLI, GraphQL
+                    │  (Express.js)    │
+                    └────────┬─────────┘
+                             │
+        ┌────────────────────▼────────────────────┐
+        │                                         │
+        │           APPLICATION CORE              │
+        │  ┌─────────────────────────────────┐   │
+        │  │    Use Cases + Domain Layer     │   │
+        │  └─────────────────────────────────┘   │
+        │                                         │
+        └────────────────────┬────────────────────┘
+                             │
+                    ┌────────▼─────────┐
+                    │  DRIVEN ADAPTER  │  ← Output: Repository, Event Handler
+                    │  (In-Memory DB)  │
+                    └──────────────────┘
+```
+
+**PORT** = Interface yang mendefinisikan kontrak  
+**ADAPTER** = Implementasi konkret dari interface
+
+### 3. Dependency Injection Container
+
+Container bertanggung jawab untuk:
+1. **Registry** - Mencatat mapping antara interface dan implementation
+2. **Resolution** - Membuat instance dengan dependencies yang benar
+3. **Lifetime Management** - Mengelola singleton vs transient scope
 
 ```typescript
-// src/modules/inventory/registration.ts
-export function registerInventoryModule(container: Container): void {
-  // Daftarkan Repository sebagai Singleton
-  container.registerSingleton<IProductRepository>(
-    'IProductRepository', 
-    ProductRepository
-  );
-  
-  // Daftarkan Use Case dengan Factory
-  container.registerFactory(
-    'CreateProductUseCase',
-    (productRepo) => new CreateProductUseCase(productRepo),
-    ['IProductRepository']
-  );
-}
+// CONTOH: Cara kerja container
+
+// 1. REGISTER - Catat binding
+container.registerSingleton<IEventBus>('IEventBus', EventBus);
+
+// 2. RESOLVE - Buat instance dengan dependencies
+const eventBus = container.resolve<IEventBus>('IEventBus');
+// Container akan:
+// - Cek apakah sudah ada instance (karena singleton)
+// - Jika belum, buat instance baru EventBus
+// - Return instance
 ```
 
-#### Container (Eksekusi)
-Container menyimpan bindings dan **resolve** dependencies saat dibutuhkan:
-
-```typescript
-// src/bootstrap/container.ts
-class Container {
-  private bindings: Map<Token, Binding> = new Map();
-  
-  resolve<T>(token: Token): T {
-    // 1. Cari binding
-    // 2. Resolve dependencies recursively
-    // 3. Instantiate dan return
-  }
-}
-```
-
-**Flow:**
-```
-1. registerSingleton('IProductRepository', ProductRepository)
-   → Simpan di Map: { 'IProductRepository': { impl: ProductRepository, scope: 'singleton' } }
-
-2. container.resolve('IProductRepository')
-   → Cek Map → Buat instance (atau return cached jika singleton)
-   → Return instance
-```
-
-### 2. Komunikasi Antar Modul Tanpa Coupling
-
-**Problem:** Modul Order perlu cek stock dari modul Inventory.
-
-**Solusi:** Gunakan interface di contracts + adapter pattern.
+### 4. Komunikasi Antar Modul
 
 ```
-┌─────────────────┐         ┌─────────────────┐
-│  Order Module   │         │ Inventory Module│
-│                 │         │                 │
-│  CreateOrder    │ ──────► │  IInventory     │
-│  UseCase        │ depends │  Checker        │
-│                 │   on    │  (interface)    │
-└─────────────────┘         └────────┬────────┘
-                                     │
-                              implemented by
-                                     │
-                              ┌──────▼────────┐
-                              │ Inventory     │
-                              │ CheckerAdapter│
-                              │ (uses Product │
-                              │  Repository)  │
-                              └───────────────┘
+┌─────────────────┐                    ┌─────────────────┐
+│  ORDER MODULE   │                    │ INVENTORY MODULE│
+│                 │                    │                 │
+│  [IInventory    │◄──── INTERFACE ───►│  [Inventory     │
+│   Checker]      │    (Contract)      │   CheckerAdapter│
+│                 │                    │                 │
+│                 │                    │  [IProduct      │
+│  [CreateOrder   │──── DEPENDS ON ───►│   Repository]   │
+│   UseCase]      │    [ReduceStock    │                 │
+│                 │     UseCase]       │                 │
+└─────────────────┘                    └─────────────────┘
+         │                                      │
+         └──────────────┬───────────────────────┘
+                        │
+              ┌─────────▼──────────┐
+              │  COMPOSITION ROOT  │
+              │  (main.ts)         │
+              │  - Wire all deps   │
+              │  - Cross-module    │
+              └────────────────────┘
 ```
 
-**Code:**
-```typescript
-// Di modul Order (contracts/IInventoryChecker.ts)
-export interface IInventoryChecker {
-  checkStock(productId: string): Promise<number>;
-}
-
-// Di modul Order (use-cases/CreateOrderUseCase.ts)
-constructor(private inventoryChecker: IInventoryChecker) {}
-
-// Di Composition Root (main.ts)
-// Wire interface ke implementasi dari modul Inventory
-container.registerSingleton<IInventoryChecker>(
-  'IInventoryChecker', 
-  InventoryCheckerAdapter  // Dari modul Inventory!
-);
-```
-
-**Hasil:** 
-- ✅ Modul Order **tidak import** dari modul Inventory
-- ✅ Modul Order hanya tahu tentang **interface**
-- ✅ Implementasi di-wire di **Composition Root**
-
-### 3. Alur HTTP Request ke Use Case
-
-```
-HTTP POST /orders
-       │
-       ▼
-┌──────────────────┐
-│ Express Route    │  (Driving Adapter)
-│ - Parse JSON     │
-│ - Validate input │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Container        │
-│ .resolve()       │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ CreateOrderUseCase│
-│ - Check stock    │
-│ - Create Order   │
-│ - Reduce stock   │
-│ - Publish event  │
-└────────┬─────────┘
-         │
-         ▼
-┌──────────────────┐
-│ Response JSON    │
-└──────────────────┘
-```
-
-**Code di main.ts:**
-```typescript
-app.post('/orders', async (req, res) => {
-  // 1. Resolve use case dari container
-  const useCase = container.resolve<CreateOrderUseCase>('CreateOrderUseCase');
-  
-  // 2. Execute dengan data dari request
-  const result = await useCase.execute({
-    id: req.body.id,
-    customerId: req.body.customerId,
-    items: req.body.items
-  });
-  
-  // 3. Return response
-  res.json(result);
-});
-```
-
-### 4. Domain Event Dispatch & Handle
-
-```
-┌─────────────────┐
-│ ReduceStockUseCase│
-│                 │
-│ 1. Kurangi stock│
-│ 2. Publish event│
-└────────┬────────┘
-         │ publish()
-         ▼
-┌─────────────────┐
-│ EventBus        │
-│ (Pub/Sub)       │
-└────────┬────────┘
-         │ notify all subscribers
-         ├──────────────────┐
-         ▼                  ▼
-┌─────────────────┐ ┌─────────────────┐
-│ StockReduced    │ │ (Handler lain   │
-│ Handler         │ │  bisa subscribe)│
-│ - Log event     │ │                 │
-│ - Low stock     │ │                 │
-│   alert         │ │                 │
-└─────────────────┘ └─────────────────┘
-```
-
-**Code:**
-```typescript
-// Publisher (di ReduceStockUseCase)
-const event = new ProductStockReduced({...});
-this.eventBus.publish(event);
-
-// Subscriber (di main.ts - Composition Root)
-const handler = new ProductStockReducedHandler(logger);
-eventBus.subscribe('ProductStockReduced', handler);
-
-// Handler
-class ProductStockReducedHandler implements IEventHandler<ProductStockReduced> {
-  handle(event: ProductStockReduced): void {
-    logger.info(`Stock reduced: ${event.productId}`);
-  }
-}
-```
+**KUNCI:** Order module TIDAK import langsung dari Inventory module!
 
 ---
 
@@ -351,25 +184,21 @@ class ProductStockReducedHandler implements IEventHandler<ProductStockReduced> {
 npm install
 ```
 
-### 2. Jalankan Development Mode
+### 2. Jalankan Aplikasi
 
 ```bash
 npm run dev
 ```
 
-Server akan berjalan di `http://localhost:3000` dan **demo flow otomatis dijalankan**.
+Aplikasi akan:
+1. Start server di `http://localhost:3000`
+2. Otomatis menjalankan demo flow
+3. Menampilkan log lengkap di console
 
-### 3. Testing Manual dengan cURL
-
-**Terminal 1:** Jalankan server
-```bash
-npm run dev
-```
-
-**Terminal 2:** Test endpoints
+### 3. Testing Manual dengan curl
 
 ```bash
-# 1. Create Product
+# Create product
 curl -X POST http://localhost:3000/products \
   -H "Content-Type: application/json" \
   -d '{
@@ -379,128 +208,284 @@ curl -X POST http://localhost:3000/products \
     "initialStock": 20
   }'
 
-# 2. Get Product
+# Get product
 curl http://localhost:3000/products/prod-001
 
-# 3. Create Order
+# Create order
 curl -X POST http://localhost:3000/orders \
   -H "Content-Type: application/json" \
   -d '{
     "id": "order-001",
-    "customerId": "cust-john",
+    "customerId": "cust-001",
     "items": [
       { "productId": "prod-001", "quantity": 3 }
     ]
   }'
-
-# 4. Try to over-order (should fail)
-curl -X POST http://localhost:3000/orders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "order-002",
-    "customerId": "cust-jane",
-    "items": [
-      { "productId": "prod-001", "quantity": 50 }
-    ]
-  }'
 ```
 
 ---
 
-## 🎬 Demo Flow
+## 📖 Penjelasan Detail Setiap Komponen
 
-Saat aplikasi dijalankan, demo flow otomatis berjalan:
+### Domain Layer (Lapisan Terdalam)
 
+**Entity** - Objek bisnis dengan identity dan lifecycle:
+```typescript
+// src/modules/inventory/domain/entities/Product.ts
+export class Product {
+  public readonly id: string;        // Identity
+  private _quantity: Quantity;       // State yang bisa berubah
+  
+  reduceStock(amount: number): boolean {
+    // Business logic di sini!
+  }
+}
 ```
-🚀 STARTING DEMO FLOW
 
-📦 STEP 1: Creating product "Gaming Laptop" with stock 10...
-✅ Product created: { success: true, ... }
+**Value Object** - Immutable object yang diidentifikasi oleh nilai:
+```typescript
+// src/modules/inventory/domain/value-objects/Quantity.ts
+export class Quantity {
+  private readonly _value: number;   // Readonly = immutable
+  
+  constructor(value: number) {
+    if (value < 0) {
+      throw new Error('Quantity cannot be negative'); // Validasi internal
+    }
+  }
+}
+```
 
-🛒 STEP 2: Creating order for 2 "Gaming Laptop"...
-   This will:
-   1. Check stock via IInventoryChecker (cross-module)
-   2. Create order entity
-   3. Reduce stock (trigger ProductStockReduced event)
-   4. Publish OrderCreated event
-✅ Order created: { success: true, ... }
+**Domain Event** - Something that happened:
+```typescript
+// src/modules/inventory/domain/events/ProductStockReduced.ts
+export class ProductStockReduced {
+  public readonly productId: string;
+  public readonly oldQuantity: number;
+  public readonly newQuantity: number;
+  public readonly occurredAt: Date;  // Timestamp otomatis
+}
+```
 
-🛒 STEP 3: Creating another order for 8 "Gaming Laptop"...
-✅ Order created: { success: true, ... }
+**Repository Interface (Port)** - Contract untuk persistence:
+```typescript
+// src/modules/inventory/domain/repositories/IProductRepository.ts
+export interface IProductRepository {
+  findById(id: string): Promise<Product | null>;
+  save(product: Product): Promise<void>;
+  update(product: Product): Promise<void>;
+}
+```
 
-❌ STEP 4: Trying to create order for 5 "Gaming Laptop"...
-   Expected: FAILURE (insufficient stock)
-🚫 Order failed as expected: { success: false, message: "Insufficient stock..." }
+### Application Layer
 
-✨ DEMO FLOW COMPLETED SUCCESSFULLY!
+**Use Case** - Encapsulates satu unit of work:
+```typescript
+// src/modules/inventory/application/use-cases/CreateProductUseCase.ts
+export class CreateProductUseCase implements IUseCase<Request, Response> {
+  constructor(private productRepository: IProductRepository) {}
+  
+  async execute(request: CreateProductRequest): Promise<CreateProductResponse> {
+    // 1. Validasi input
+    // 2. Cek business rules
+    // 3. Orchestrate domain entities
+    // 4. Persist via repository
+    // 5. Return response
+  }
+}
+```
 
-Key learnings:
-1. ✅ Modules communicate via interfaces
-2. ✅ Domain events published and handled automatically
-3. ✅ Business rules prevent overselling
-4. ✅ Dependency Injection enables loose coupling
-5. ✅ Composition Root wires all dependencies
+### Infrastructure Layer (Lapisan Terluar)
+
+**Repository Implementation (Driven Adapter)**:
+```typescript
+// src/modules/inventory/infrastructure/repositories/ProductRepository.ts
+export class ProductRepository implements IProductRepository {
+  async findById(id: string): Promise<Product | null> {
+    // Implementasi nyata: query ke database
+    // Demo ini: in-memory Map
+  }
+}
+```
+
+**HTTP Controller (Driving Adapter)**:
+```typescript
+// src/bootstrap/main.ts
+app.post('/products', async (req, res) => {
+  // 1. Terima HTTP request
+  // 2. Resolve use case dari container
+  // 3. Execute use case
+  // 4. Return HTTP response
+});
+```
+
+**Event Handler (Driven Adapter)**:
+```typescript
+// src/modules/inventory/infrastructure/event-handlers/ProductStockReducedHandler.ts
+export class ProductStockReducedHandler implements IEventHandler<ProductStockReduced> {
+  handle(event: ProductStockReduced): void {
+    // React to event - logging, notification, etc.
+  }
+}
 ```
 
 ---
 
-## 💡 Key Learnings
+## 🎓 Flow Lengkap: Dari HTTP Request ke Domain
 
-### 1. Dependency Inversion Principle
-- **High-level modules** (Use Cases) tidak bergantung pada **low-level modules** (Database)
-- Keduanya bergantung pada **abstractions** (Interfaces)
-- Memudahkan testing dan pergantian implementation
+### Scenario: Create Order
 
-### 2. Registry vs Container
-| Registry | Container |
-|----------|-----------|
-| Pencatatan bindings | Eksekusi resolve |
-| `registerSingleton()` | `resolve()` |
-| Di `registration.ts` | Dipanggil di runtime |
-
-### 3. Cross-Module Communication
-- **TIDAK** direct import antar modul
-- Gunakan **interface** di folder `contracts/`
-- **Adapter** mengimplementasikan interface
-- **Wiring** di Composition Root
-
-### 4. Driving vs Driven Adapters
-| Driving (Primary) | Driven (Secondary) |
-|-------------------|-------------------|
-| HTTP Controllers | Repository Implementation |
-| CLI Commands | Event Handlers |
-| GraphQL Resolvers | External API Clients |
-
-### 5. Composition Root Pattern
-- **SATU tempat** untuk wiring semua dependencies
-- Memisahkan konfigurasi dari business logic
-- Memudahkan understanding seluruh aplikasi
+```
+1. HTTP POST /orders
+   │
+   ▼
+2. Express Route Handler (Driving Adapter)
+   │
+   ▼
+3. Container.resolve('CreateOrderUseCase')
+   │
+   ▼
+4. CreateOrderUseCase.execute()
+   │
+   ├─► 4a. IInventoryChecker.checkStock()  ← Cross-module call!
+   │       │
+   │       ▼
+   │    InventoryCheckerAdapter
+   │       │
+   │       ▼
+   │    IProductRepository.findById()
+   │
+   ├─► 4b. new Order()  ← Create domain entity
+   │
+   ├─► 4c. IOrderRepository.save()
+   │
+   └─► 4d. ReduceStockUseCase.execute()  ← Cross-module call!
+           │
+           ▼
+        Product.reduceStock()  ← Domain entity method
+           │
+           ▼
+        IProductRepository.update()
+           │
+           ▼
+        EventBus.publish(ProductStockReduced)  ← Domain Event!
+           │
+           ├─► ProductStockReducedHandler.handle()  ← Event Handler
+           │
+           ▼
+        EventBus.publish(OrderCreated)  ← Another Domain Event!
+           │
+           └─► OrderCreatedHandler.handle()  ← Another Event Handler
+           
+5. Return HTTP Response
+```
 
 ---
 
-## 📚 Resources Lanjutan
+## 💡 Kelebihan Arsitektur Ini
 
-- [Clean Architecture by Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+### Hexagonal/Clean Architecture
+
+| Kelebihan | Penjelasan |
+|-----------|------------|
+| **Testabilitas** | Domain bisa di-test tanpa database atau framework |
+| **Maintainability** | Ganti teknologi (Express→Fastify, Map→PostgreSQL) tanpa ubah domain |
+| **Flexibility** | Mudah tambah channel baru (GraphQL, gRPC, CLI) |
+| **Business Focus** | Kode domain mencerminkan aturan bisnis dengan jelas |
+| **Separation of Concerns** | Setiap layer punya tanggung jawab spesifik |
+
+### Modular Monolith
+
+| Kelebihan | Penjelasan |
+|-----------|------------|
+| **Simple Deployment** | Satu deployable unit, tidak kompleks seperti microservices |
+| **Performance** | Komunikasi antar modul dalam proses (bukan network call) |
+| **Data Consistency** | Bisa gunakan transaksi ACID lintas modul |
+| **Easy Debugging** | Trace request dalam satu codebase |
+| **Evolution Path** | Bisa dipecah ke microservices nanti jika perlu |
+| **Cost Efficient** | Tidak ada overhead infrastruktur distributed system |
+
+---
+
+## ⚠️ Hal-Hal Penting untuk Dipelajari
+
+### 1. Jangan Lakukan Ini ❌
+
+```typescript
+// SALAH: Domain import dari infrastructure
+import { ProductRepository } from '../infrastructure/repositories/ProductRepository';
+export class Product { ... }  // ❌ TIDAK BOLEH!
+
+// SALAH: Use case instantiate repository langsung
+const repo = new ProductRepository();  // ❌ TIDAK BOLEH!
+
+// SALAH: Module import langsung dari module lain
+import { ProductRepository } from '../../inventory/...';  // ❌ TIDAK BOLEH!
+```
+
+### 2. Lakukan Ini ✅
+
+```typescript
+// BENAR: Domain hanya import dari domain lain
+import { Quantity } from '../value-objects/Quantity';
+export class Product { ... }  // ✅ OK!
+
+// BENAR: Use case dapat repository via constructor injection
+constructor(private productRepository: IProductRepository) {}  // ✅ OK!
+
+// BENAR: Module bergantung pada interface
+constructor(private inventoryChecker: IInventoryChecker) {}  // ✅ OK!
+```
+
+### 3. Composition Root adalah SATU-SATUYA tempat untuk:
+
+```typescript
+// ✅ OK di main.ts (Composition Root)
+const repo = new ProductRepository();
+const useCase = new CreateProductUseCase(repo);
+
+// ❌ TIDAK OK di tempat lain!
+```
+
+---
+
+## 📝 Checklist Pemahaman
+
+Setelah mempelajari proyek ini, pastikan Anda bisa menjawab:
+
+- [ ] Apa perbedaan Entity dan Value Object?
+- [ ] Mengapa Domain layer tidak boleh import dari Infrastructure?
+- [ ] Apa fungsi dari Repository Interface?
+- [ ] Bagaimana cara kerja Dependency Injection Container?
+- [ ] Apa bedanya Singleton dan Transient scope?
+- [ ] Bagaimana modul Order berkomunikasi dengan modul Inventory?
+- [ ] Apa itu Domain Event dan kapan menggunakannya?
+- [ ] Apa perbedaan Driving Adapter dan Driven Adapter?
+- [ ] Di mana seharusnya wiring dependencies dilakukan?
+- [ ] Mengapa Use Case tidak instantiate repository langsung?
+
+---
+
+## 🔗 Langkah Selanjutnya
+
+Setelah memahami dasar-dasarnya, pelajari:
+
+1. **CQRS Pattern** - Memisahkan read dan write operations
+2. **Event Sourcing** - Menyimpan state sebagai sequence of events
+3. **Saga Pattern** - Managing distributed transactions
+4. **Advanced DI** - Automatic dependency resolution dengan reflection
+5. **Testing Strategies** - Unit test, integration test, contract test
+
+---
+
+## 📚 Referensi Tambahan
+
+- [Clean Architecture by Robert C. Martin](https://blog.cleancoder.com/)
+- [Domain-Driven Design by Eric Evans](https://domainlanguage.com/)
 - [Hexagonal Architecture by Alistair Cockburn](https://alistair.cockburn.us/hexagonal-architecture/)
-- [Domain-Driven Design](https://martinfowler.com/bliki/DomainDrivenDesign.html)
 
 ---
 
-## ⚠️ Catatan Penting
+**Happy Learning! 🚀**
 
-Project ini adalah **educational purpose**:
-- ✅ Menggunakan in-memory storage (bukan database nyata)
-- ✅ Implementasi DI Container sederhana (bukan library production)
-- ✅ Error handling minimal
-- ✅ Fokus pada kejelasan arsitektur
-
-Untuk production, pertimbangkan:
-- Database persistence (PostgreSQL, MongoDB)
-- Proper error handling & logging
-- Validation libraries (class-validator, zod)
-- DI Container library (Inversify, tsyringe)
-- Testing suite (Jest, Mocha)
-
----
-
-Happy Learning! 🎓
+Jika ada pertanyaan atau ingin diskusi lebih lanjut, silakan eksplorasi kode dan coba modifikasi untuk memahami lebih dalam!

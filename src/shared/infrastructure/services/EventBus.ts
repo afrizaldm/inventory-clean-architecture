@@ -1,44 +1,48 @@
-import { IEventBus } from '../../kernel/IEventBus';
-import { IEventHandler } from '../../../types';
+/**
+ * ============================================================================
+ * SHARED INFRASTRUCTURE - EventBus Implementation
+ * ============================================================================
+ * Implementasi konkret dari IEventBus menggunakan in-memory storage.
+ * Ini adalah DRIVEN ADAPTER - di-trigger oleh domain events.
+ * 
+ * CATATAN PENTING:
+ * - Implementation ini berada di infrastructure layer
+ * - Hanya bergantung pada interface IEventBus dan IEventHandler
+ * - Bisa diganti dengan implementasi lain (Redis Pub/Sub, RabbitMQ, dll) tanpa mengubah domain
+ */
+
+import { IEventBus } from '../kernel/IEventBus';
+import { IEventHandler } from '../../types';
 
 /**
- * Map untuk menyimpan list handler per event type
- * Key: nama event, Value: array of handlers
+ * Map untuk menyimpan handlers per event type
+ * Key: nama event type (string)
+ * Value: array of handlers untuk event type tersebut
  */
 type EventHandlerMap = Map<string, IEventHandler<any>[]>;
 
 /**
- * Implementasi sederhana dari Event Bus menggunakan Pub/Sub pattern
- * 
- * Kelas ini bertanggung jawab untuk:
- * 1. Menyimpan registry handlers untuk setiap tipe event
- * 2. Mendistribusikan event ke semua handler yang subscribe
- * 
- * Dalam production, Anda bisa mengganti ini dengan implementasi yang lebih robust
- * seperti menggunakan message broker (RabbitMQ, Kafka, dll)
+ * EventBus Class - Implementasi sederhana pub/sub pattern
  */
 export class EventBus implements IEventBus {
-  /**
-   * Internal storage untuk handlers
-   * Struktur: Map<eventName, Array<handlers>>
-   */
+  /** Storage untuk semua event handlers */
   private handlers: EventHandlerMap = new Map();
 
   /**
-   * Publish event ke semua handler yang telah subscribe
+   * Publish event ke semua handler yang subscribed
+   * @param event - Event yang akan dipublish
    * 
-   * @param event - Event object yang akan dipublish
-   * 
-   * Cara kerja:
-   * 1. Ambil nama event dari constructor name
-   * 2. Cari semua handler yang subscribe ke event ini
+   * FLOW:
+   * 1. Ambil event type dari constructor name
+   * 2. Cari semua handlers yang subscribed ke event type ini
    * 3. Panggil handle() pada setiap handler
+   * 4. Handle error secara individual agar satu handler error tidak mengganggu yang lain
    */
   public publish<T>(event: T): void {
-    // Dapatkan nama event dari constructor function
-    const eventType = (event as any).constructor.name;
+    // Dapatkan nama tipe event dari constructor
+    const eventType = event.constructor.name;
     
-    // Ambil semua handler untuk event ini
+    // Ambil semua handlers untuk event type ini
     const handlers = this.handlers.get(eventType);
 
     // Jika tidak ada handler, log dan return
@@ -60,15 +64,16 @@ export class EventBus implements IEventBus {
   }
 
   /**
-   * Subscribe handler untuk tipe event tertentu
+   * Subscribe handler ke event type tertentu
+   * @param eventType - Nama tipe event (harus sama dengan constructor name)
+   * @param handler - Handler instance yang akan menangani event
    * 
-   * @param eventType - Nama event yang akan di-subscribe
-   * @param handler - Handler function/object yang akan dipanggil
-   * 
-   * Catatan: Multiple handler bisa subscribe ke event yang sama
+   * CATATAN:
+   * - Multiple handlers bisa subscribe ke event type yang sama
+   * - Handlers akan dipanggil secara synchronous dalam urutan subscription
    */
   public subscribe<T>(eventType: string, handler: IEventHandler<T>): void {
-    // Jika belum ada array untuk event ini, buat baru
+    // Buat array baru jika belum ada handlers untuk event type ini
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, []);
     }

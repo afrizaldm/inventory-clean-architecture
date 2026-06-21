@@ -1,26 +1,29 @@
 /**
- * Value Object: Money
+ * ============================================================================
+ * INVENTORY MODULE - Money Value Object
+ * ============================================================================
+ * Value Object untuk merepresentasikan nilai uang.
  * 
- * Value Object untuk merepresentasikan jumlah uang.
- * Menggunakan integer (bukan float) untuk menghindari masalah presisi floating point.
- * Contoh: Rp 10.000 disimpan sebagai 1000000 (dalam satuan sen/terkecil)
+ * PENTING: Menggunakan satuan terkecil (sen/cents) untuk menghindari floating point errors
+ * Contoh: Rp 10.000,00 disimpan sebagai 1000000 (sen)
  * 
- * Money juga immutable untuk mencegah side effects
+ * DOMAIN LAYER - TIDAK BOLEH IMPORT DARI LUAR DOMAIN!
  */
+
 export class Money {
   /**
-   * Amount dalam satuan terkecil (sen, bukan rupiah/dollar)
-   * readonly untuk memastikan immutability
+   * Amount dalam satuan terkecil (sen/cents)
+   * Private readonly untuk enforce immutability
    */
   private readonly _amount: number;
 
   /**
    * Constructor dengan validasi
-   * @param amount - Jumlah dalam satuan terkecil (misalnya sen)
+   * @param amount - Amount dalam satuan terkecil (sen)
    * @throws Error jika amount negatif
    */
   constructor(amount: number) {
-    // Business rule: Money tidak boleh negatif
+    // Validasi business rule: uang tidak boleh negatif
     if (amount < 0) {
       throw new Error('Money amount cannot be negative');
     }
@@ -28,29 +31,26 @@ export class Money {
   }
 
   /**
-   * Getter untuk mengakses amount
-   * @returns Amount dalam satuan terkecil
+   * Getter untuk amount dalam sen
    */
   get amount(): number {
     return this._amount;
   }
 
   /**
-   * Factory method untuk membuat Money dari desimal (rupiah/dollar)
-   * Contoh: fromDecimal(99.99) => Money dengan amount 9999 (sen)
-   * 
-   * @param decimalAmount - Jumlah dalam desimal (misalnya 99.99)
-   * @returns Instance Money baru
+   * Convert dari desimal ke satuan terkecil
+   * Contoh: fromDecimal(10000.50) => Money dengan amount 1000050 sen
+   * @param decimalAmount - Amount dalam format desimal (Rupiah)
+   * @returns Money instance
    */
   static fromDecimal(decimalAmount: number): Money {
-    // Konversi ke satuan terkecil (dikalikan 100)
+    // Kalikan 100 dan bulatkan untuk menghindari floating point issues
     return new Money(Math.round(decimalAmount * 100));
   }
 
   /**
-   * Mengkonversi amount ke format desimal (untuk display)
-   * Contoh: amount 9999 => 99.99
-   * 
+   * Convert ke format desimal untuk display
+   * Contoh: toDecimal() => 10000.50 (Rupiah)
    * @returns Amount dalam format desimal
    */
   toDecimal(): number {
@@ -58,8 +58,8 @@ export class Money {
   }
 
   /**
-   * Membandingkan apakah Money ini sama dengan Money lain
-   * @param other - Money lain untuk dibandingkan
+   * Bandingkan dengan Money lain
+   * @param other - Money yang dibandingkan
    * @returns true jika amount sama
    */
   equals(other: Money): boolean {
@@ -67,29 +67,25 @@ export class Money {
   }
 
   /**
-   * Menambahkan Money ini dengan Money lain
-   * @param other - Money yang akan ditambahkan
-   * @returns Money baru hasil penjumlahan
+   * Tambah dengan Money lain
+   * @param other - Money yang ditambahkan
+   * @returns Money baru (immutable)
    */
   add(other: Money): Money {
     return new Money(this._amount + other.amount);
   }
 
   /**
-   * Mengurangi Money ini dengan Money lain
-   * @param other - Money yang akan dikurangkan
-   * @returns Money baru hasil pengurangan
+   * Kurangi dengan Money lain
+   * @param other - Money yang dikurangi
+   * @returns Money baru (immutable)
+   * @throws Error jika hasil negatif
    */
   subtract(other: Money): Money {
-    return new Money(this._amount - other.amount);
-  }
-
-  /**
-   * Mengalikan Money dengan multiplier
-   * @param multiplier - Faktor pengali
-   * @returns Money baru hasil perkalian
-   */
-  multiply(multiplier: number): Money {
-    return new Money(Math.round(this._amount * multiplier));
+    const result = this._amount - other.amount;
+    if (result < 0) {
+      throw new Error('Resulting money amount cannot be negative');
+    }
+    return new Money(result);
   }
 }

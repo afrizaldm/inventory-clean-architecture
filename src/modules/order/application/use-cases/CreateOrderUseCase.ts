@@ -1,72 +1,80 @@
+/**
+ * ============================================================================
+ * ORDER MODULE - CreateOrderUseCase
+ * ============================================================================
+ * Use Case untuk membuat order baru.
+ * 
+ * INI ADALAH CONTOH KOMUNIKASI ANTAR MODUL:
+ * 1. Order module butuh cek stock dari Inventory module
+ * 2. Order module TIDAK import langsung dari Inventory module
+ * 3. Order module menggunakan interface IInventoryChecker
+ * 4. Implementation IInventoryChecker disediakan oleh Inventory module
+ * 5. Wiring dilakukan di Composition Root (main.ts)
+ * 
+ * FLOW:
+ * 1. Validasi input
+ * 2. Cek stock via IInventoryChecker (cross-module call)
+ * 3. Buat order entity
+ * 4. Simpan order
+ * 5. Kurangi stock via ReduceStockUseCase (cross-module call)
+ * 6. Publish OrderCreated event
+ */
+
 import { IUseCase } from '../../../../types';
-import { Order, IOrderItem } from '../../domain/entities/Order';
-import { Money } from '../../../inventory/domain/value-objects/Money';
-import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
-import { IInventoryChecker } from '../../contracts/IInventoryChecker';
-import { OrderCreated } from '../../domain/events/OrderCreated';
+import { Order, IOrderItem } from '../domain/entities/Order';
+import { Money } from '../../inventory/domain/value-objects/Money';
+import { IOrderRepository } from '../domain/repositories/IOrderRepository';
+import { IInventoryChecker } from '../contracts/IInventoryChecker';
+import { OrderCreated } from '../domain/events/OrderCreated';
 import { IEventBus } from '../../../../shared/kernel/IEventBus';
-import { ReduceStockUseCase } from '../../../inventory/application/use-cases/ReduceStockUseCase';
+import { ReduceStockUseCase } from '../../inventory/application/use-cases/ReduceStockUseCase';
 
 /**
- * Interface untuk input/request CreateOrderUseCase
+ * Input DTO untuk CreateOrderUseCase
  */
 export interface CreateOrderRequest {
   /** ID unik order */
   id: string;
   /** ID customer yang membuat order */
   customerId: string;
-  /** List item yang diorder */
+  /** Item-item yang dipesan */
   items: {
+    /** ID produk */
     productId: string;
+    /** Jumlah yang dipesan */
     quantity: number;
   }[];
 }
 
 /**
- * Interface untuk output/response CreateOrderUseCase
+ * Output DTO untuk CreateOrderUseCase
  */
 export interface CreateOrderResponse {
   /** Apakah operasi berhasil */
   success: boolean;
   /** Pesan hasil operasi */
   message: string;
-  /** Order entity yang dibuat (jika berhasil) */
+  /** Order yang dibuat (jika berhasil) */
   order?: Order;
 }
 
 /**
- * Use Case: CreateOrderUseCase
+ * CreateOrderUseCase Class
+ * Responsible untuk orchestrasi pembuatan order
  * 
- * Use case ini adalah contoh KOMPLEKS yang melibatkan:
- * 1. Komunikasi antar modul (Order -> Inventory)
- * 2. Multiple repository operations
- * 3. Domain event publishing
- * 
- * Ini menunjukkan bagaimana Modular Monolith bekerja:
- * - Modul Order TIDAK langsung import dari modul Inventory
- * - Modul Order bergantung pada interface IInventoryChecker
- * - Implementasi IInventoryChecker di-wire di Composition Root
- * 
- * Alur use case ini:
- * 1. Validasi input
- * 2. Cek stock untuk setiap item (via IInventoryChecker)
- * 3. Buat order entity
- * 4. Simpan order
- * 5. Kurangi stock untuk setiap item (via ReduceStockUseCase)
- * 6. Publish event OrderCreated
+ * DEPENDENCIES:
+ * 1. IOrderRepository - dari Order module (internal)
+ * 2. IInventoryChecker - dari Inventory module (cross-module!)
+ * 3. ReduceStockUseCase - dari Inventory module (cross-module!)
+ * 4. IEventBus - dari Shared module (shared service)
  */
 export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOrderResponse> {
   /**
    * Constructor dengan dependency injection
-   * 
-   * @param orderRepository - Repository untuk order (dari modul order)
-   * @param inventoryChecker - Interface untuk cek stock (dari modul inventory)
-   * @param reduceStockUseCase - Use case untuk kurangi stock (dari modul inventory)
+   * @param orderRepository - Repository untuk persist order
+   * @param inventoryChecker - Interface untuk cek stock (dari Inventory module)
+   * @param reduceStockUseCase - Use case untuk kurangi stock (dari Inventory module)
    * @param eventBus - Event bus untuk publish events
-   * 
-   * Perhatikan bahwa dependencies cross-module (inventoryChecker, reduceStockUseCase)
-   * di-inject sebagai interface/abstraction, bukan concrete implementation.
-   * Wiring dilakukan di Composition Root.
    */
   constructor(
     private orderRepository: IOrderRepository,
@@ -76,18 +84,22 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
   ) {}
 
   /**
-   * Execute use case ini dengan request yang diberikan
+   * Eksekusi use case
+   * @param request - Input data untuk create order
+   * @returns Response dengan status dan result
    * 
-   * @param request - Data untuk membuat order
-   * @returns Response dengan status dan hasil operasi
+   * FLOW DETAIL:
+   * 1. Validasi input data
+   * 2. Cek ketersediaan stock untuk setiap item (via IInventoryChecker)
+   * 3. Hitung total amount
+   * 4. Buat Order entity
+   * 5. Simpan order ke repository
+   * 6. Kurangi stock untuk setiap item (via ReduceStockUseCase)
+   * 7. Publish OrderCreated event
    */
   async execute(request: CreateOrderRequest): Promise<CreateOrderResponse> {
     try {
-      // ============================================
-      // STEP 1: Validasi input
-      // ============================================
-      
-      // Validasi: ID order dan customer ID wajib ada
+      // ========== STEP 1: Validasi Input ==========
       if (!request.id || !request.customerId) {
         return {
           success: false,
@@ -95,7 +107,6 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         };
       }
 
-      // Validasi: Minimal satu item
       if (!request.items || request.items.length === 0) {
         return {
           success: false,
@@ -103,17 +114,10 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         };
       }
 
-      // ============================================
-      // STEP 2: Cek ketersediaan stock (Cross-module!)
-      // ============================================
-      
-      // Loop melalui setiap item untuk cek stock
-      // Ini adalah contoh komunikasi antar modul:
-      // - Modul Order memanggil IInventoryChecker
-      // - Implementasi sebenarnya ada di modul Inventory
-      // - Tapi modul Order tidak perlu tahu implementasinya
+      // ========== STEP 2: Cek Stock Availability (CROSS-MODULE!) ==========
+      // Loop setiap item dan cek stock via IInventoryChecker
+      // Ini adalah contoh komunikasi antar modul tanpa direct dependency!
       for (const item of request.items) {
-        // Validasi quantity
         if (item.quantity <= 0) {
           return {
             success: false,
@@ -121,10 +125,8 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
           };
         }
 
-        // Cek stock melalui interface (bukan langsung ke inventory module)
+        // Cek stock - IInventoryChecker diimplementasi oleh Inventory module
         const availableStock = await this.inventoryChecker.checkStock(item.productId);
-        
-        // Business Rule: Stock harus mencukupi
         if (availableStock < item.quantity) {
           return {
             success: false,
@@ -133,24 +135,19 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         }
       }
 
-      // ============================================
-      // STEP 3: Buat order items dengan harga
-      // ============================================
-      
-      // Dalam implementasi nyata, kita akan mendapatkan harga dari Product Service
-      // Untuk demo ini, kita gunakan harga dummy
+      // ========== STEP 3: Siapkan Order Items & Hitung Total ==========
       const orderItems: IOrderItem[] = [];
       let totalAmount = 0;
 
       for (const item of request.items) {
-        // Harga dummy: 100000 = Rp 1.000,00 (dalam satuan terkecil)
-        // Dalam production, ini akan didapat dari Product Service
-        const unitPrice = 100000;
+        // HARDCODED PRICE UNTUK DEMO
+        // Dalam implementasi nyata, kita akan fetch price dari Product service
+        const unitPrice = 100000; // Rp 1.000,00 dalam sen
         const itemTotal = unitPrice * item.quantity;
         
         orderItems.push({
           productId: item.productId,
-          productName: `Product_${item.productId}`, // Nama produk dummy
+          productName: `Product_${item.productId}`, // Dummy name
           quantity: item.quantity,
           unitPrice: new Money(unitPrice)
         });
@@ -158,10 +155,7 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         totalAmount += itemTotal;
       }
 
-      // ============================================
-      // STEP 4: Buat Order entity
-      // ============================================
-      
+      // ========== STEP 4: Buat Order Entity ==========
       const order = new Order({
         id: request.id,
         customerId: request.customerId,
@@ -171,27 +165,20 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         createdAt: new Date()
       });
 
-      // ============================================
-      // STEP 5: Simpan order ke repository
-      // ============================================
-      
+      // ========== STEP 5: Simpan Order ==========
       await this.orderRepository.save(order);
 
-      // ============================================
-      // STEP 6: Kurangi stock untuk setiap item
-      // ============================================
-      
-      // Loop melalui setiap item dan kurangi stock
-      // Ini akan trigger ProductStockReduced event untuk setiap item
+      // ========== STEP 6: Kurangi Stock (CROSS-MODULE!) ==========
+      // Panggil ReduceStockUseCase dari Inventory module
+      // Event ProductStockReduced akan dipublish otomatis
       for (const item of request.items) {
         const result = await this.reduceStockUseCase.execute({
           productId: item.productId,
           amount: item.quantity
         });
 
-        // Jika gagal kurangi stock, rollback bisa dilakukan di sini
-        // (untuk demo, kita langsung return error)
         if (!result.success) {
+          // Rollback: Dalam production, kita perlu rollback order yang sudah dibuat
           return {
             success: false,
             message: `Failed to reduce stock for product ${item.productId}: ${result.message}`
@@ -199,11 +186,7 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         }
       }
 
-      // ============================================
-      // STEP 7: Publish Domain Event
-      // ============================================
-      
-      // Buat dan publish event bahwa order telah dibuat
+      // ========== STEP 7: Publish Domain Event ==========
       const orderCreatedEvent = new OrderCreated({
         orderId: order.id,
         customerId: order.customerId,
@@ -213,17 +196,13 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
 
       this.eventBus.publish(orderCreatedEvent);
 
-      // ============================================
-      // STEP 8: Return response sukses
-      // ============================================
-      
+      // ========== STEP 8: Return Success Response ==========
       return {
         success: true,
         message: 'Order created successfully',
         order
       };
     } catch (error: any) {
-      // Handle unexpected errors
       return {
         success: false,
         message: `Error creating order: ${error.message}`
