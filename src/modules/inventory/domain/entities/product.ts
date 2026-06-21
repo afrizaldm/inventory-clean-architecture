@@ -72,7 +72,7 @@ export class Product extends Entity<ProductId> {
     // Validasi business rule: stok harus cukup
     if (!this._stock.isSufficientFor(quantity)) {
       throw new Error(
-        `Stok tidak cukup! Produk "${this._name}" hanya memiliki ${this._stock} unit, diminta ${quantity} unit`
+        `Stok tidak cukup! Produk "${this._name}" hanya memiliki ${this._stock.toNumber()} unit, diminta ${quantity.toNumber()} unit`
       );
     }
 

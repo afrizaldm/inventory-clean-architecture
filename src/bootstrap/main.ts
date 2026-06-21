@@ -31,6 +31,7 @@ import { ProductStockReduced } from '../modules/inventory/domain/events/ProductS
 import { OrderCreated } from '../modules/order/domain/events/OrderCreated';
 import { CreateProductUseCase } from '../modules/inventory/application/use-cases/CreateProductUseCase';
 import { CreateOrderUseCase } from '../modules/order/application/use-cases/CreateOrderUseCase';
+import { IProductRepository } from '../modules/inventory/domain/repositories/IProductRepository';
 
 // ============================================================================
 // STEP 1: CREATE CONTAINER
@@ -165,21 +166,27 @@ app.post('/orders', async (req: Request, res: Response) => {
 // Endpoint untuk mendapatkan detail produk
 // ----------------------------------------------------------------------------
 app.get('/products/:id', async (req: Request, res: Response) => {
-  console.log(`\n[HTTP] GET /products/${req.params.id} received`);
+  console.log(`\n[HTTP] GET /products/${req.params['id']} received`);
   
   try {
     // Resolve repository dari container
-    const productRepo = container.resolve('IProductRepository');
+    const productRepo = container.resolve<IProductRepository>('IProductRepository');
+    
+    const productId = req.params['id'];
+    if (!productId) {
+      res.status(400).json({ message: 'Product ID is required' });
+      return;
+    }
     
     // Cari produk by ID
-    const product = await productRepo.findById(req.params.id);
+    const product = await productRepo.findById(productId);
     
     if (product) {
       res.json({
-        id: product.id,
+        id: product['id'],
         name: product.name,
-        price: product.price / 100, // Konversi dari satuan terkecil ke desimal
-        stock: product.quantity.value
+        price: product.price.amount,
+        stock: product.stock.toNumber()
       });
     } else {
       res.status(404).json({ message: 'Product not found' });
@@ -194,7 +201,7 @@ app.get('/products/:id', async (req: Request, res: Response) => {
 // STEP 5: START SERVER & RUN DEMO
 // ============================================================================
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env['PORT'] || 3000;
 
 app.listen(PORT, () => {
   console.log('='.repeat(60));
@@ -240,7 +247,7 @@ async function runDemoFlow(): Promise<void> {
     const productResult = await createProductUseCase.execute({
       id: 'prod-laptop-001',
       name: 'Gaming Laptop',
-      price: 15000000, // Rp 15.000.000
+      price: 15000000,
       initialStock: 10
     });
     

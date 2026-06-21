@@ -1,6 +1,7 @@
 import { IUseCase } from '../../../../types';
-import { Product } from '../../domain/entities/Product';
-import { Quantity } from '../../domain/value-objects/Quantity';
+import { Product } from '../../domain/entities/product';
+import { Money } from '../../../../shared/kernel/value-objects';
+import { Quantity } from '../../../../shared/kernel/value-objects';
 import { IProductRepository } from '../../domain/repositories/IProductRepository';
 
 /**
@@ -126,12 +127,12 @@ export class CreateProductUseCase implements IUseCase<CreateProductRequest, Crea
       // ============================================
       
       // Buat entity Product dengan Value Objects
-      const product = new Product({
-        id: request.id,
-        name: request.name,
-        price: Math.round(request.price * 100), // Konversi ke satuan terkecil (sen)
-        quantity: new Quantity(request.initialStock)
-      });
+      const product = new Product(
+        request.id,
+        request.name,
+        new Money(Math.round(request.price * 100), 'IDR'),
+        new Quantity(request.initialStock)
+      );
 
       // ============================================
       // STEP 4: Simpan ke repository

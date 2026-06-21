@@ -10,4 +10,4 @@ export {
 } from './use-cases/create-order.use-case';
 
 // Services (Facades)
-export { OrderApplicationService } from './services/order-application.service';
+// TODO: export { OrderApplicationService } from './services/order-application.service';

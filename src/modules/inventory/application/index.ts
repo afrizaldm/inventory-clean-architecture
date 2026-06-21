@@ -18,4 +18,4 @@ export {
 } from './use-cases/reduce-stock.use-case';
 
 // Services (Facades)
-export { InventoryApplicationService } from './services/inventory-application.service';
+// TODO: export { InventoryApplicationService } from './services/inventory-application.service';

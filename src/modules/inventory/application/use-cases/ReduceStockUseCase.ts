@@ -1,5 +1,5 @@
 import { IUseCase } from '../../../../types';
-import { Product } from '../../domain/entities/Product';
+import { Quantity } from '../../../../shared/kernel/value-objects';
 import { IProductRepository } from '../../domain/repositories/IProductRepository';
 import { ProductStockReduced } from '../../domain/events/ProductStockReduced';
 import { IEventBus } from '../../../../shared/kernel/IEventBus';
@@ -96,7 +96,7 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
       }
 
       // Simpan stock sebelumnya untuk event
-      const previousQuantity = product.quantity.value;
+      const previousQuantity = product.stock.toNumber();
 
       // ============================================
       // STEP 3: Eksekusi business logic di entity
@@ -104,20 +104,14 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
       
       // Panggil method reduceStock di entity Product
       // Entity yang mengandung business logic untuk validasi stock
-      const success = product.reduceStock(request.amount);
-      if (!success) {
-        return {
-          success: false,
-          message: `Insufficient stock for product ${request.productId}. Required: ${request.amount}, Available: ${previousQuantity}`
-        };
-      }
+      product.reduceStock(new Quantity(request.amount));
 
       // ============================================
       // STEP 4: Update repository
       // ============================================
       
       // Simpan perubahan ke repository
-      await this.productRepository.update(product);
+      await this.productRepository.save(product);
 
       // ============================================
       // STEP 5: Publish Domain Event
@@ -127,7 +121,7 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
       const event = new ProductStockReduced({
         productId: product.id,
         oldQuantity: previousQuantity,
-        newQuantity: product.quantity.value,
+        newQuantity: product.stock.toNumber(),
         reducedBy: request.amount
       });
 
@@ -143,7 +137,7 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
         success: true,
         message: 'Stock reduced successfully',
         previousQuantity,
-        newQuantity: product.quantity.value
+        newQuantity: product.stock.toNumber()
       };
     } catch (error: any) {
       // Handle unexpected errors

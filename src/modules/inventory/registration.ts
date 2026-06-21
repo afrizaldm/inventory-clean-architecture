@@ -36,7 +36,7 @@ export function registerInventoryModule(container: Container): void {
   // 
   // Ini di-bind ke interface IInventoryChecker yang didefinisikan di modul Order
   // Wiring ini adalah kunci dari Dependency Inversion Principle
-  container.registerSingleton<IInventoryChecker>('IInventoryChecker', InventoryCheckerAdapter);
+  container.registerSingleton<IInventoryChecker>('IInventoryChecker', InventoryCheckerAdapter, ['IProductRepository']);
   
   // ============================================
   // Register Use Cases (Transient)

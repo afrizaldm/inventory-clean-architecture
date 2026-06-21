@@ -1,6 +1,6 @@
 import { IUseCase } from '../../../../types';
-import { Order, IOrderItem } from '../../domain/entities/Order';
-import { Money } from '../../../inventory/domain/value-objects/Money';
+import { Order, OrderItem, OrderStatus } from '../../domain/entities/order';
+import { Money } from '../../../../shared/kernel/value-objects';
 import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
 import { IInventoryChecker } from '../../contracts/IInventoryChecker';
 import { OrderCreated } from '../../domain/events/OrderCreated';
@@ -139,7 +139,7 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
       
       // Dalam implementasi nyata, kita akan mendapatkan harga dari Product Service
       // Untuk demo ini, kita gunakan harga dummy
-      const orderItems: IOrderItem[] = [];
+      const orderItems: OrderItem[] = [];
       let totalAmount = 0;
 
       for (const item of request.items) {
@@ -150,9 +150,10 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
         
         orderItems.push({
           productId: item.productId,
-          productName: `Product_${item.productId}`, // Nama produk dummy
+          productName: `Product_${item.productId}`,
           quantity: item.quantity,
-          unitPrice: new Money(unitPrice)
+          unitPrice: new Money(unitPrice, 'IDR'),
+          totalPrice: new Money(itemTotal, 'IDR')
         });
         
         totalAmount += itemTotal;
@@ -162,14 +163,13 @@ export class CreateOrderUseCase implements IUseCase<CreateOrderRequest, CreateOr
       // STEP 4: Buat Order entity
       // ============================================
       
-      const order = new Order({
-        id: request.id,
-        customerId: request.customerId,
-        items: orderItems,
-        totalAmount: new Money(totalAmount),
-        status: 'pending',
-        createdAt: new Date()
-      });
+      const order = new Order(
+        request.id,
+        request.customerId,
+        orderItems,
+        new Money(totalAmount, 'IDR'),
+        OrderStatus.PENDING
+      );
 
       // ============================================
       // STEP 5: Simpan order ke repository

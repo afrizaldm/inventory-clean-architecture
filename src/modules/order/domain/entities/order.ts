@@ -47,6 +47,7 @@ export interface OrderItem {
  * Business logic terkait order ada di sini
  */
 export class Order extends Entity<OrderId> {
+  private _customerId: string;
   private _items: OrderItem[];
   private _totalAmount: Money;
   private _status: OrderStatus;
@@ -54,11 +55,13 @@ export class Order extends Entity<OrderId> {
 
   constructor(
     id: OrderId,
+    customerId: string,
     items: OrderItem[],
     totalAmount: Money,
     status: OrderStatus = OrderStatus.PENDING
   ) {
     super(id);
+    this._customerId = customerId;
     this._items = items;
     this._totalAmount = totalAmount;
     this._status = status;
@@ -66,6 +69,10 @@ export class Order extends Entity<OrderId> {
   }
 
   // Getters (immutable access)
+  get customerId(): string {
+    return this._customerId;
+  }
+
   get items(): readonly OrderItem[] {
     return [...this._items];
   }

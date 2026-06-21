@@ -1,5 +1,5 @@
-import { IInventoryChecker } from '../../contracts/IInventoryChecker';
-import { IProductRepository } from '../../../inventory/domain/repositories/IProductRepository';
+import { IInventoryChecker } from '../../../order/contracts/IInventoryChecker';
+import { IProductRepository } from '../../domain/repositories/IProductRepository';
 
 /**
  * Adapter: InventoryCheckerAdapter
@@ -45,6 +45,6 @@ export class InventoryCheckerAdapter implements IInventoryChecker {
     }
     
     // Kembalikan quantity saat ini
-    return product.quantity.value;
+    return product.stock.toNumber();
   }
 }

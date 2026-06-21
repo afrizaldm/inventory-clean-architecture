@@ -59,17 +59,18 @@ export class Container {
    * 
    * @param token - Identifier untuk dependency (biasanya nama interface)
    * @param implementation - Constructor class yang akan di-instantiate
+   * @param dependencies - List token dependencies yang dibutuhkan
    * 
    * Contoh:
    * container.registerSingleton<IProductRepository>('IProductRepository', ProductRepository);
    */
-  registerSingleton<T>(token: Token, implementation: Constructor<T>): void {
+  registerSingleton<T>(token: Token, implementation: Constructor<T>, dependencies: Token[] = []): void {
     this.bindings.set(token, { 
       implementation, 
       scope: 'singleton',
-      dependencies: this.extractDependencies(implementation)
+      dependencies
     });
-    console.log(`[Container] Registered Singleton: ${token}`);
+    console.log(`[Container] Registered Singleton: ${token}${dependencies.length > 0 ? ` with dependencies: [${dependencies.join(', ')}]` : ''}`);
   }
 
   /**
@@ -80,17 +81,18 @@ export class Container {
    * 
    * @param token - Identifier untuk dependency
    * @param implementation - Constructor class yang akan di-instantiate
+   * @param dependencies - List token dependencies yang dibutuhkan
    * 
    * Contoh:
    * container.registerTransient('CreateProductUseCase', CreateProductUseCase);
    */
-  registerTransient<T>(token: Token, implementation: Constructor<T>): void {
+  registerTransient<T>(token: Token, implementation: Constructor<T>, dependencies: Token[] = []): void {
     this.bindings.set(token, { 
       implementation, 
       scope: 'transient',
-      dependencies: this.extractDependencies(implementation)
+      dependencies
     });
-    console.log(`[Container] Registered Transient: ${token}`);
+    console.log(`[Container] Registered Transient: ${token}${dependencies.length > 0 ? ` with dependencies: [${dependencies.join(', ')}]` : ''}`);
   }
 
   /**
@@ -167,22 +169,14 @@ export class Container {
     // Buat instance
     let instance: T;
     if (typeof binding.implementation === 'function') {
-      // Cek apakah ini constructor atau factory
-      // Factory dipanggil tanpa 'new', constructor dengan 'new'
-      if (binding.scope === 'transient' && !binding.dependencies) {
-        // Kemungkinan constructor tanpa dependencies eksplisit
-        try {
-          instance = new (binding.implementation as Constructor<T>)();
-        } catch {
-          // Jika gagal, coba sebagai factory
-          instance = (binding.implementation as Factory<T>)();
-        }
+      const proto = (binding.implementation as any).prototype;
+      const isConstructor = proto !== undefined;
+      if (isConstructor) {
+        instance = new (binding.implementation as Constructor<T>)(...resolvedDependencies);
       } else {
-        // Factory dengan dependencies
         instance = (binding.implementation as Factory<T>)(...resolvedDependencies);
       }
     } else {
-      // Constructor dengan dependencies
       instance = new (binding.implementation as Constructor<T>)(...resolvedDependencies);
     }
 
@@ -193,25 +187,6 @@ export class Container {
 
     console.log(`[Container] Resolved: ${token}`);
     return instance;
-  }
-
-  /**
-   * Extract dependencies dari constructor parameter names
-   * 
-   * CATATAN: TypeScript tidak menyimpan parameter names di runtime.
-   * Untuk production, gunakan decorator metadata reflection.
-   * Di sini kita gunakan pendekatan sederhana dengan asumsi
-   * parameter constructor memiliki nama yang sama dengan token.
-   * 
-   * Untuk implementasi ini, kita return empty array dan bergantung
-   * pada manual dependency specification di registerFactory.
-   */
-  private extractDependencies(constructor: Constructor): Token[] {
-    // Dalam implementasi nyata dengan decorators:
-    // return Reflect.getMetadata('design:paramtypes', constructor);
-    
-    // Untuk demo ini, return empty dan biarkan user specify manually
-    return [];
   }
 
   /**
