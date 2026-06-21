@@ -1,41 +1,50 @@
+/**
+ * ============================================================================
+ * INVENTORY MODULE - ProductStockReducedHandler
+ * ============================================================================
+ * Event Handler untuk ProductStockReduced domain event.
+ * 
+ * EVENT HANDLER:
+ * - Subscribe ke event bus untuk event tertentu
+ * - Dipanggil otomatis saat event dipublish
+ * - Bisa digunakan untuk: logging, audit, notifikasi, cache invalidation, dll
+ * 
+ * INI ADALAH DRIVEN ADAPTER:
+ * - Di-trigger oleh domain events
+ * - Tidak menginisiasi aksi sendiri
+ */
+
 import { IEventHandler } from '../../../../types';
 import { ProductStockReduced } from '../../domain/events/ProductStockReduced';
 import { ILogger } from '../../../../shared/infrastructure/services/Logger';
 
 /**
- * Event Handler: ProductStockReducedHandler
- * 
- * Handler ini bertanggung jawab untuk merespon event ProductStockReduced.
- * Handler berada di Infrastructure Layer karena melakukan side effects
- * seperti logging, notification, dll.
- * 
- * Handler TIDAK mengubah state domain, hanya merespon event yang sudah terjadi.
- * 
- * Contoh penggunaan handler:
- * - Logging untuk audit trail
- * - Mengirim notifikasi ke warehouse
- * - Update cache
- * - Trigger reordering jika stock rendah
+ * ProductStockReducedHandler Class
+ * Menangani event ProductStockReduced
  */
 export class ProductStockReducedHandler implements IEventHandler<ProductStockReduced> {
   /**
    * Constructor dengan dependency injection
-   * @param logger - Logger untuk logging event
+   * @param logger - Logger untuk mencatat event
    */
   constructor(private logger: ILogger) {}
 
   /**
    * Handle event ProductStockReduced
+   * @param event - Event yang diterima
    * 
-   * Method ini dipanggil otomatis oleh Event Bus ketika event dipublish.
-   * 
-   * @param event - Event object yang mengandung informasi tentang stock reduction
+   * CONTOH PENGGUNAAN LAIN:
+   * - Kirim notifikasi ke admin jika stock menipis
+   * - Update cache product
+   * - Sync ke warehouse management system
+   * - Catat audit trail ke database terpisah
    */
   handle(event: ProductStockReduced): void {
     // Log informasi lengkap tentang event
     this.logger.info(
       `Product stock reduced for ${event.productId}: ${event.oldQuantity} -> ${event.newQuantity} (-${event.reducedBy})`,
       { 
+        eventId: event.constructor.name,
         productId: event.productId,
         oldQuantity: event.oldQuantity,
         newQuantity: event.newQuantity,
@@ -44,15 +53,10 @@ export class ProductStockReducedHandler implements IEventHandler<ProductStockRed
       }
     );
 
-    // Di sini Anda bisa menambahkan logic lain seperti:
-    // - Cek apakah stock mencapai threshold minimum
-    // - Trigger auto-reorder
-    // - Kirim notifikasi ke supplier
-    // - Update analytics dashboard
-    
-    // Contoh: Log warning jika stock rendah
+    // Contoh: Tambahkan logic lain di sini
+    // Misalnya: cek apakah stock sudah menipis dan kirim alert
     if (event.newQuantity < 5) {
-      this.logger.warn(`Low stock alert for product ${event.productId}!`);
+      this.logger.warn(`Low stock alert for product ${event.productId}! Only ${event.newQuantity} left.`);
     }
   }
 }

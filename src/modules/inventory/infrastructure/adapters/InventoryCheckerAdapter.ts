@@ -1,50 +1,52 @@
-import { IInventoryChecker } from '../../contracts/IInventoryChecker';
-import { IProductRepository } from '../../../inventory/domain/repositories/IProductRepository';
+/**
+ * ============================================================================
+ * INVENTORY MODULE - InventoryCheckerAdapter
+ * ============================================================================
+ * Adapter yang mengimplementasi IInventoryChecker untuk modul Order.
+ * 
+ * INI ADALAH CONTOH KOMUNIKASI ANTAR MODUL:
+ * 1. File ini ada di modul INVENTORY
+ * 2. Mengimplementasi interface IInventoryChecker dari modul ORDER
+ * 3. Menggunakan IProductRepository dari modul INVENTORY
+ * 4. Wiring dilakukan di Composition Root
+ * 
+ * POLA: Dependency Inversion Principle
+ * - Order module bergantung pada abstraksi (IInventoryChecker)
+ * - Inventory module menyediakan implementasi (InventoryCheckerAdapter)
+ */
+
+import { IInventoryChecker } from '../../../order/contracts/IInventoryChecker';
+import { IProductRepository } from '../../domain/repositories/IProductRepository';
 
 /**
- * Adapter: InventoryCheckerAdapter
- * 
- * Kelas ini adalah ADAPTER yang mengimplementasikan interface IInventoryChecker
- * (yang dibutuhkan modul Order) dengan menggunakan ProductRepository dari modul Inventory.
- * 
- * Ini adalah contoh dari:
- * 1. Dependency Inversion Principle - Modul Order bergantung pada interface, bukan implementasi
- * 2. Adapter Pattern - Mengadaptasi ProductRepository untuk memenuhi kontrak IInventoryChecker
- * 3. Cross-module communication tanpa direct coupling
- * 
- * Wiring dilakukan di Composition Root (bootstrap/main.ts):
- * - Container.bind<IInventoryChecker>('IInventoryChecker').to(InventoryCheckerAdapter)
+ * InventoryCheckerAdapter Class
+ * Implementasi IInventoryChecker menggunakan ProductRepository
  */
 export class InventoryCheckerAdapter implements IInventoryChecker {
   /**
    * Constructor dengan dependency injection
-   * 
-   * @param productRepository - Repository dari modul inventory
-   * 
-   * Perhatikan bahwa adapter ini berada di modul inventory, bukan order.
-   * Ini karena adapter perlu mengakses implementation detail dari inventory module.
+   * @param productRepository - Repository untuk akses data produk
    */
   constructor(private productRepository: IProductRepository) {}
 
   /**
-   * Mengecek stock produk
-   * 
-   * Implementasi ini menggunakan ProductRepository untuk mendapatkan
-   * informasi stock dari produk tertentu.
-   * 
-   * @param productId - ID produk yang akan dicek
+   * Cek stock produk
+   * @param productId - ID produk yang dicek
    * @returns Jumlah stock tersedia (0 jika produk tidak ditemukan)
+   * 
+   * CATATAN:
+   * - Return 0 jika produk tidak ditemukan (bukan throw error)
+   * - Ini adalah query operation (read-only)
    */
   async checkStock(productId: string): Promise<number> {
-    // Ambil produk dari repository
     const product = await this.productRepository.findById(productId);
     
-    // Jika produk tidak ditemukan, kembalikan 0
+    // Jika produk tidak ada, return 0
     if (!product) {
       return 0;
     }
     
-    // Kembalikan quantity saat ini
+    // Return quantity saat ini
     return product.quantity.value;
   }
 }

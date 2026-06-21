@@ -1,29 +1,36 @@
 /**
- * Interface umum untuk Repository pattern
+ * ============================================================================
+ * SHARED KERNEL - IRepository
+ * ============================================================================
+ * Interface repository generic yang digunakan sebagai kontrak untuk semua repository.
+ * Ini adalah bagian dari domain layer dan TIDAK boleh bergantung pada infrastruktur.
  * 
- * Repository adalah abstraction layer antara domain layer dan data layer.
- * Domain layer hanya bergantung pada interface ini, bukan implementasi konkretnya.
- * Ini adalah implementasi dari Dependency Inversion Principle (SOLID-D).
- * 
+ * PRINSIP: Dependency Inversion Principle (DIP)
+ * - High-level modules (domain) tidak bergantung pada low-level modules (infrastructure)
+ * - Keduanya bergantung pada abstraksi (interface ini)
+ */
+
+/**
+ * Generic Repository Interface
  * @template T - Tipe entity yang akan direpository
  */
 export interface IRepository<T> {
   /**
-   * Mencari entity berdasarkan ID
+   * Cari entity berdasarkan ID
    * @param id - Identifier unik dari entity
    * @returns Entity jika ditemukan, null jika tidak
    */
   findById(id: string): Promise<T | null>;
-  
+
   /**
-   * Menyimpan entity baru ke storage
+   * Simpan entity baru ke storage
    * @param entity - Entity yang akan disimpan
    */
   save(entity: T): Promise<void>;
-  
+
   /**
-   * Mengupdate entity yang sudah ada di storage
-   * @param entity - Entity yang akan diupdate
+   * Update entity yang sudah ada
+   * @param entity - Entity dengan data yang diupdate
    */
   update(entity: T): Promise<void>;
 }

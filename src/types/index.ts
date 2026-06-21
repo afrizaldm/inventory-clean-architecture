@@ -1,25 +1,44 @@
 /**
- * Interface umum untuk Use Case pattern
- * 
- * Use Case adalah salah satu konsep penting dalam Clean Architecture.
- * Setiap use case merepresentasikan satu aksi bisnis yang spesifik.
- * 
- * @template Request - Tipe data input untuk use case ini
- * @template Response - Tipe data output dari use case ini
+ * ============================================================================
+ * TYPES - Global Type Definitions
+ * ============================================================================
+ * File ini berisi type definitions yang digunakan secara global di seluruh aplikasi.
+ * Ini adalah bagian dari shared kernel yang bisa diakses oleh semua modul.
  */
-export interface IUseCase<Request, Response> {
-  execute(request: Request): Promise<Response>;
+
+/**
+ * Interface untuk Use Case
+ * Use Case adalah pola untuk mengenkapsulasi logika bisnis spesifik
+ * @template TRequest - Tipe data input untuk use case
+ * @template TResponse - Tipe data output dari use case
+ */
+export interface IUseCase<TRequest, TResponse> {
+  /**
+   * Eksekusi use case dengan request tertentu
+   * @param request - Data input untuk use case
+   * @returns Promise yang resolve ke response
+   */
+  execute(request: TRequest): Promise<TResponse>;
 }
 
 /**
- * Interface umum untuk Event Handler pattern
- * 
- * Event Handler digunakan untuk menangani domain events.
- * Ini memungkinkan loose coupling antara komponen yang menghasilkan event
- * dan komponen yang merespon event tersebut.
- * 
+ * Interface untuk Event Handler
+ * Event Handler bertanggung jawab untuk menangani domain events
  * @template TEvent - Tipe event yang akan dihandle
  */
 export interface IEventHandler<TEvent> {
+  /**
+   * Handle event yang diterima
+   * @param event - Event yang akan diproses
+   */
   handle(event: TEvent): void;
+}
+
+/**
+ * Base interface untuk semua Domain Events
+ * Domain events merepresentasikan sesuatu yang terjadi di domain
+ */
+export interface IDomainEvent {
+  /** Timestamp kapan event terjadi */
+  readonly occurredAt: Date;
 }

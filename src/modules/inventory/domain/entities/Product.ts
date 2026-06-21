@@ -1,8 +1,22 @@
+/**
+ * ============================================================================
+ * INVENTORY MODULE - Product Entity
+ * ============================================================================
+ * Entity untuk merepresentasikan produk dalam inventory.
+ * 
+ * KARAKTERISTIK ENTITY:
+ * 1. Memiliki identity (ID) yang unik
+ * 2. Dapat berubah state sepanjang lifecycle-nya
+ * 3. Mengandung business logic terkait produk
+ * 
+ * DOMAIN LAYER - TIDAK BOLEH IMPORT DARI LUAR DOMAIN!
+ */
+
 import { Quantity } from '../value-objects/Quantity';
 
 /**
- * Interface untuk properties Product
- * Digunakan sebagai DTO untuk constructor
+ * Interface untuk props constructor Product
+ * Digunakan untuk validasi type saat membuat instance baru
  */
 export interface IProductProps {
   /** ID unik produk */
@@ -16,31 +30,20 @@ export interface IProductProps {
 }
 
 /**
- * Entity: Product
- * 
- * Entity adalah objek domain yang memiliki identity (ID unik).
- * Berbeda dengan Value Object yang didefinisikan oleh atribut,
- * Entity didefinisikan oleh ID-nya.
- * 
- * Product berada di Domain Layer, jadi:
- * - TIDAK boleh import dari luar domain (no framework, no database)
- * - Hanya bergantung pada Value Objects dan logic bisnis murni
- * - Mengandung business logic untuk manipulasi stock
+ * Product Entity Class
+ * Merepresentasikan produk dalam domain inventory
  */
 export class Product {
-  /** ID unik produk - readonly karena tidak boleh berubah */
+  /** ID unik produk (immutable) */
   public readonly id: string;
   
-  /** Nama produk - readonly karena tidak boleh berubah */
+  /** Nama produk (immutable) */
   public readonly name: string;
   
-  /** Harga produk - readonly karena tidak boleh berubah */
+  /** Harga dalam sen (immutable) */
   public readonly price: number;
   
-  /**
-   * Quantity/stock produk
-   * Private karena hanya bisa diubah melalui method yang terkontrol
-   */
+  /** Quantity/stock - private karena bisa berubah */
   private _quantity: Quantity;
 
   /**
@@ -56,42 +59,50 @@ export class Product {
 
   /**
    * Getter untuk quantity
-   * @returns Current quantity
+   * Return readonly copy untuk prevent external mutation
    */
   get quantity(): Quantity {
     return this._quantity;
   }
 
   /**
-   * Mengurangi stock produk
-   * Method ini mengandung business logic untuk validasi stock
+   * Kurangi stock produk
+   * BUSINESS RULE: Stock tidak boleh negatif
    * 
-   * @param amount - Jumlah yang akan dikurangi
+   * @param amount - Jumlah yang dikurangi
    * @returns true jika berhasil, false jika stock tidak cukup
    * 
-   * Business Rule:
-   * - Stock tidak boleh menjadi negatif
-   * - Jika stock tidak cukup, operasi gagal
+   * CATATAN: Method ini TIDAK langsung save ke repository
+   * Repository di-update oleh use case setelah method ini dipanggil
    */
   reduceStock(amount: number): boolean {
-    // Validasi: cek apakah stock mencukupi
+    // Cek apakah stock cukup
     if (this._quantity.value < amount) {
       return false; // Stock tidak mencukupi
     }
 
-    // Kurangi stock dengan membuat instance Quantity baru (immutable)
+    // Buat Quantity baru (immutable) dengan nilai berkurang
     this._quantity = new Quantity(this._quantity.value - amount);
     return true;
   }
 
   /**
-   * Menambah stock produk
-   * Digunakan misalnya saat ada retur produk atau restock
+   * Tambah stock produk
+   * Digunakan untuk restock atau return
    * 
-   * @param amount - Jumlah yang akan ditambahkan
+   * @param amount - Jumlah yang ditambahkan
    */
   increaseStock(amount: number): void {
-    // Tambah stock dengan membuat instance Quantity baru
+    // Buat Quantity baru (immutable) dengan nilai bertambah
     this._quantity = new Quantity(this._quantity.value + amount);
+  }
+
+  /**
+   * Cek apakah stock cukup untuk jumlah tertentu
+   * @param required - Jumlah yang dibutuhkan
+   * @returns true jika stock cukup
+   */
+  hasStock(required: number): boolean {
+    return this._quantity.isSufficient(required);
   }
 }

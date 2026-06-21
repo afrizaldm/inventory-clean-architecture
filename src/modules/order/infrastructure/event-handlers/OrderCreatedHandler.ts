@@ -1,50 +1,45 @@
+/**
+ * ============================================================================
+ * ORDER MODULE - OrderCreatedHandler
+ * ============================================================================
+ * Event Handler untuk OrderCreated domain event.
+ */
+
 import { IEventHandler } from '../../../../types';
-import { OrderCreated } from '../../domain/events/OrderCreated';
+import { OrderCreated } from '../domain/events/OrderCreated';
 import { ILogger } from '../../../../shared/infrastructure/services/Logger';
 
 /**
- * Event Handler: OrderCreatedHandler
- * 
- * Handler ini merespon event OrderCreated.
- * Bisa digunakan untuk:
- * - Mengirim email konfirmasi ke customer
- * - Notifikasi ke tim fulfillment
- * - Update analytics
- * - Trigger workflow lain
+ * OrderCreatedHandler Class
+ * Menangani event OrderCreated
  */
 export class OrderCreatedHandler implements IEventHandler<OrderCreated> {
   /**
    * Constructor dengan dependency injection
-   * @param logger - Logger untuk logging event
+   * @param logger - Logger untuk mencatat event
    */
   constructor(private logger: ILogger) {}
 
   /**
    * Handle event OrderCreated
-   * 
-   * @param event - Event object yang mengandung informasi tentang order yang dibuat
+   * @param event - Event yang diterima
    */
   handle(event: OrderCreated): void {
-    // Log informasi lengkap tentang order
     this.logger.info(
       `Order created: ${event.orderId} for customer ${event.customerId}`,
       { 
         orderId: event.orderId,
         customerId: event.customerId,
-        totalAmount: event.totalAmount / 100, // Konversi ke format desimal
+        totalAmount: event.totalAmount / 100, // Convert dari sen ke Rupiah
         itemCount: event.items.length,
-        items: event.items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity
-        })),
+        items: event.items.map(item => `${item.productName} x${item.quantity}`),
         timestamp: event.occurredAt.toISOString()
       }
     );
 
-    // Di sini Anda bisa menambahkan logic lain seperti:
+    // Contoh: Di sini bisa ditambahkan logic lain
     // - Kirim email konfirmasi
-    // - Notifikasi ke warehouse
-    // - Update dashboard sales
-    // - Trigger fraud detection
+    // - Update analytics
+    // - Trigger fulfillment process
   }
 }

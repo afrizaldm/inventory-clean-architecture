@@ -1,37 +1,44 @@
+/**
+ * ============================================================================
+ * SHARED - Registration Module
+ * ============================================================================
+ * Mendaftarkan shared dependencies yang digunakan oleh semua modul.
+ * Ini adalah bagian dari Composition Root pattern.
+ * 
+ * FUNCTION: registerSharedDependencies
+ * - Dipanggil sekali di main.ts saat aplikasi start
+ * - Mendaftarkan layanan bersama seperti EventBus dan Logger
+ * - Semua modul bisa menggunakan layanan ini melalui DI Container
+ */
+
 import { Container } from '../bootstrap/container';
 import { EventBus } from './infrastructure/services/EventBus';
 import { IEventBus } from './kernel/IEventBus';
 import { ConsoleLogger, ILogger } from './infrastructure/services/Logger';
 
 /**
- * Registrasi Shared Dependencies
+ * Registrasi semua shared dependencies ke container
+ * @param container - DI Container instance
  * 
- * Function ini mendaftarkan dependencies yang digunakan bersama
- * oleh semua modul di aplikasi.
+ * DEPENDENCIES YANG DIREGISTRASI:
+ * 1. IEventBus -> EventBus (Singleton)
+ *    - Event bus untuk komunikasi via domain events
+ *    - Singleton agar semua modul menggunakan event bus yang sama
  * 
- * Shared dependencies termasuk:
- * - EventBus: Untuk komunikasi via domain events
- * - Logger: Untuk logging di seluruh aplikasi
- * 
- * Dependencies ini di-register sebagai Singleton karena:
- * - EventBus: Harus satu instance agar semua handlers subscribe ke event bus yang sama
- * - Logger: Statelesss dan bisa digunakan bersama
+ * 2. ILogger -> ConsoleLogger (Singleton)
+ *    - Logger untuk logging di seluruh aplikasi
+ *    - Singleton agar konsisten dan bisa di-mock untuk testing
  */
 export function registerSharedDependencies(container: Container): void {
-  console.log('\n=== Registering Shared Dependencies ===');
-  
-  // ============================================
-  // Register EventBus sebagai Singleton
-  // ============================================
-  // EventBus harus singleton agar semua module subscribe ke instance yang sama
-  // Jika transient, setiap module akan punya event bus terpisah dan events tidak akan sampai
+  console.log('[Registration] Registering shared dependencies...');
+
+  // Register EventBus sebagai singleton
+  // Singleton dipilih karena kita ingin semua modul menggunakan event bus yang sama
   container.registerSingleton<IEventBus>('IEventBus', EventBus);
-  
-  // ============================================
-  // Register Logger sebagai Singleton
-  // ============================================
-  // Logger adalah stateless service yang bisa digunakan bersama
+
+  // Register Logger sebagai singleton
+  // Singleton dipilih untuk konsistensi logging di seluruh aplikasi
   container.registerSingleton<ILogger>('ILogger', ConsoleLogger);
-  
-  console.log('=== Shared Dependencies Registered ===\n');
+
+  console.log('[Registration] Shared dependencies registered successfully');
 }

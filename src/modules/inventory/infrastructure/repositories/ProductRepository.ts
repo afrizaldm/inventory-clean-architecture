@@ -1,64 +1,89 @@
+/**
+ * ============================================================================
+ * INVENTORY MODULE - ProductRepository Implementation
+ * ============================================================================
+ * Implementasi in-memory dari IProductRepository.
+ * 
+ * INI ADALAH DRIVEN ADAPTER dalam Hexagonal Architecture:
+ * - Driven Adapter = Implementasi konkret dari Port (interface)
+ * - Di-trigger oleh domain/application layer
+ * - Bisa diganti dengan implementasi lain (TypeORM, Prisma, MongoDB, dll)
+ * 
+ * UNTUK DEMO: Menggunakan Map sebagai in-memory storage
+ * PRODUCTION: Ganti dengan database repository yang sebenarnya
+ */
+
 import { IProductRepository } from '../../domain/repositories/IProductRepository';
 import { Product } from '../../domain/entities/Product';
 
 /**
- * In-memory storage untuk Product
+ * In-memory storage menggunakan Map
+ * Key: product ID (string)
+ * Value: Product entity
  * 
- * Menggunakan Map untuk menyimpan produk dengan ID sebagai key.
- * Ini adalah implementasi sederhana untuk demo/learning purposes.
- * 
- * Dalam production, ini akan diganti dengan implementasi database nyata
- * (PostgreSQL, MongoDB, dll) yang tetap mengimplementasikan interface
- * IProductRepository yang sama.
+ * CATATAN: Data akan hilang saat aplikasi restart
+ * Ini hanya untuk demo/development
  */
 const productsStorage: Map<string, Product> = new Map();
 
 /**
- * Implementation: ProductRepository
- * 
- * Kelas ini adalah implementasi konkret dari IProductRepository.
- * Berada di Infrastructure Layer karena mengandung detail implementasi storage.
- * 
- * Perhatikan bahwa kelas ini:
- * - Mengimplementasikan interface dari Domain Layer
- * - Tidak mengubah interface domain
- * - Bisa diganti dengan implementasi lain (database) tanpa mengubah domain
+ * ProductRepository Class
+ * Implementasi konkret dari IProductRepository
  */
 export class ProductRepository implements IProductRepository {
   /**
-   * Mencari Product berdasarkan ID dari in-memory storage
-   * 
-   * @param id - ID unik produk
+   * Cari product berdasarkan ID
+   * @param id - ID unik product
    * @returns Product jika ditemukan, null jika tidak
    * 
-   * Catatan: Dalam implementasi database nyata, ini akan menjadi query SQL/NoSQL
+   * KOMPLEKSITAS: O(1) - Map lookup
    */
   async findById(id: string): Promise<Product | null> {
-    // Ambil dari Map, kembalikan null jika tidak ada
+    // Map.get() return undefined jika key tidak ada
+    // Kita convert ke null untuk konsistensi dengan interface
     return productsStorage.get(id) || null;
   }
 
   /**
-   * Menyimpan Product baru ke in-memory storage
-   * 
+   * Simpan product baru
    * @param product - Product entity yang akan disimpan
    * 
-   * Catatan: Dalam implementasi database nyata, ini akan menjadi INSERT query
+   * CATATAN:
+   * - Jika product dengan ID sama sudah ada, akan di-overwrite
+   * - Untuk production, mungkin perlu validasi dan throw error jika duplicate
    */
   async save(product: Product): Promise<void> {
-    // Simpan ke Map dengan ID sebagai key
     productsStorage.set(product.id, product);
+    console.log(`[ProductRepository] Saved product: ${product.id} (${product.name})`);
   }
 
   /**
-   * Mengupdate Product yang sudah ada di in-memory storage
+   * Update product yang sudah ada
+   * @param product - Product entity dengan data yang diupdate
    * 
-   * @param product - Product entity yang akan diupdate
-   * 
-   * Catatan: Dalam implementasi database nyata, ini akan menjadi UPDATE query
+   * CATATAN:
+   * - Sama seperti save(), menggunakan Map.set()
+   * - Untuk production, mungkin perlu cek apakah product sudah ada sebelum update
    */
   async update(product: Product): Promise<void> {
-    // Update di Map (set ulang dengan key yang sama)
     productsStorage.set(product.id, product);
+    console.log(`[ProductRepository] Updated product: ${product.id}`);
+  }
+
+  /**
+   * UTILITY METHOD (tidak ada di interface)
+   * Clear semua data - berguna untuk testing
+   */
+  async clear(): Promise<void> {
+    productsStorage.clear();
+    console.log('[ProductRepository] Cleared all products');
+  }
+
+  /**
+   * UTILITY METHOD (tidak ada di interface)
+   * Get semua products - berguna untuk debugging
+   */
+  async findAll(): Promise<Product[]> {
+    return Array.from(productsStorage.values());
   }
 }
