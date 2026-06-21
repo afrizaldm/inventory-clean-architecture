@@ -5,12 +5,14 @@
     "lib": ["ES2021"],
 
     /* Modules */
+    "paths": {
+      "@/*": ["./src/*"],
+      "$/*": ["./*"]
+    },
     "module": "commonjs",
-    "moduleResolution": "node",
     "resolveJsonModule": true,
 
     /* Emit */
-    "outDir": "./dist",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

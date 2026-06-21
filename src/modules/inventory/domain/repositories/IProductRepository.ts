@@ -1,4 +1,4 @@
-import { Product } from '../entities/Product';
+import { Product } from "../entities/product";
 
 /**
  * Interface: IProductRepository
@@ -31,8 +31,8 @@ export interface IProductRepository {
   save(product: Product): Promise<void>;
   
   /**
-   * Mengupdate Product yang sudah ada di storage
-   * @param product - Product entity yang akan diupdate
+   * Meng-update Product yang sudah ada di storage
+   * @param product - Product entity yang akan di update
    */
   update(product: Product): Promise<void>;
 }

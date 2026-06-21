@@ -8,7 +8,7 @@
  * aplikasi di-bootstrap.
  * 
  * Dalam arsitektur Modular Monolith dengan Hexagonal/Clean Architecture:
- * 1. Semua modul diregistrasi ke container di sini
+ * 1. Semua modul di registrasi ke container di sini
  * 2. Cross-module dependencies di-wire di sini
  * 3. Event handlers di-subscribe di sini
  * 4. HTTP server di-start di sini

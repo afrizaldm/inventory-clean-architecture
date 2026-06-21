@@ -5,8 +5,8 @@
   "main": "dist/bootstrap/main.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/bootstrap/main.js",
-    "dev": "ts-node src/bootstrap/main.ts",
+    "start": "node -r tsconfig-paths/register dist/bootstrap/main.js",
+    "dev": "ts-node -r tsconfig-paths/register src/bootstrap/main.ts",
     "clean": "rm -rf dist"
   },
   "keywords": [
@@ -27,6 +27,7 @@
     "@types/express": "^4.17.17",
     "@types/node": "^20.8.2",
     "ts-node": "^10.9.1",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.2.2"
   }
 }
