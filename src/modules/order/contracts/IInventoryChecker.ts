@@ -1,26 +1,33 @@
 /**
- * Interface: IInventoryChecker
+ * ============================================================================
+ * ORDER MODULE - IInventoryChecker Contract
+ * ============================================================================
+ * Interface untuk mengecek stock dari modul Inventory.
  * 
- * Interface ini didefinisikan di modul order untuk kebutuhan modul order
- * mengecek stock di modul inventory.
+ * PENTING: File ini ada di modul ORDER, tapi interface-nya akan diimplementasi
+ * oleh modul INVENTORY. Ini adalah contoh Dependency Inversion Principle.
  * 
- * Ini adalah contoh dari Dependency Inversion Principle dalam Modular Monolith:
- * - Modul Order TIDAK langsung bergantung pada modul Inventory
- * - Modul Order hanya bergantung pada interface ini
- * - Implementasi konkret disediakan oleh modul Inventory
+ * CARA KERJA KOMUNIKASI ANTAR MODUL:
+ * 1. Order module mendefinisikan KEBUTUHAN (interface ini)
+ * 2. Inventory module menyediakan IMPLEMENTASI (InventoryCheckerAdapter)
+ * 3. Composition Root melakukan WIRING (binding interface ke implementasi)
  * 
- * Interface ini seharusnya ada di folder contracts/ modul order karena
- * ini adalah "kontrak" yang dibutuhkan modul order dari modul lain.
+ * HASIL: Order module TIDAK langsung bergantung pada Inventory module!
+ */
+
+/**
+ * IInventoryChecker Interface
+ * Kontrak untuk mengecek ketersediaan stock
  */
 export interface IInventoryChecker {
   /**
-   * Mengecek jumlah stock tersedia untuk produk tertentu
+   * Cek stock produk tertentu
+   * @param productId - ID produk yang dicek
+   * @returns Jumlah stock yang tersedia (0 jika produk tidak ditemukan)
    * 
-   * @param productId - ID produk yang akan dicek stock-nya
-   * @returns Jumlah stock tersedia (0 jika produk tidak ditemukan)
-   * 
-   * Catatan: Interface ini tidak menentukan bagaimana cara cek stock,
-   * itu adalah tanggung jawab implementasi di modul inventory.
+   * CATATAN:
+   * - Return 0 jika produk tidak ditemukan (bukan throw error)
+   * - Ini adalah query operation (tidak mengubah state)
    */
   checkStock(productId: string): Promise<number>;
 }

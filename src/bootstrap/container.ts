@@ -1,25 +1,23 @@
 /**
- * DI Container - Implementasi Sederhana dari Dependency Injection Container
+ * ============================================================================
+ * BOOTSTRAP - DI Container Implementation
+ * ============================================================================
+ * Implementasi sederhana Dependency Injection Container dari scratch.
  * 
- * Container ini bertanggung jawab untuk:
- * 1. Menyimpan registry bindings (interface -> implementation)
+ * FITUR CONTAINER INI:
+ * 1. Register binding (interface -> implementation)
  * 2. Resolve dependencies secara rekursif
  * 3. Handle Singleton dan Transient scope
- * 4. Inject dependencies ke constructor
+ * 4. Factory pattern untuk complex dependencies
  * 
- * PENTING: Ini adalah implementasi sederhana untuk pembelajaran.
- * Dalam production, Anda bisa menggunakan library seperti Inversify, tsyringe, dll.
- * 
- * Konsep penting:
- * - Registry: Pencatatan binding antara token dan implementation
- * - Container: Eksekusi resolve dependencies berdasarkan registry
- * - Composition Root: Tempat semua wiring dilakukan (di main.ts)
+ * TIDAK MENGGUNAKAN LIBRARY seperti Inversify/tsyringe
+ * Untuk pembelajaran bagaimana DI Container bekerja di balik layar
  */
 
 // Type definitions untuk container
-type Token = string; // Identifier untuk dependency (biasanya interface name)
-type Constructor<T = any> = new (...args: any[]) => T; // Constructor function type
-type Factory<T = any> = (...args: any[]) => T; // Factory function type
+type Token = string;
+type Constructor<T = any> = new (...args: any[]) => T;
+type Factory<T = any> = (...args: any[]) => T;
 
 /**
  * Interface untuk Binding configuration
@@ -31,38 +29,26 @@ interface Binding {
   scope: 'singleton' | 'transient';
   /** Cached instance untuk singleton */
   resolvedInstance?: any;
-  /** Dependencies yang diperlukan (untuk manual injection) */
-  dependencies?: Token[];
 }
 
 /**
- * Class: Container
- * 
- * DI Container yang mendukung:
- * - Register singleton dan transient
- * - Register dengan factory function
- * - Auto-resolve dependencies berdasarkan constructor parameter names
- * - Manual dependency specification
+ * DI Container Class
+ * Responsible untuk manage dependency registrations dan resolutions
  */
 export class Container {
   /** Map untuk menyimpan semua bindings */
   private bindings: Map<Token, Binding> = new Map();
-  
-  /** Graph untuk deteksi circular dependency */
-  private dependencyGraph: Map<Token, Token[]> = new Map();
 
   /**
-   * Register dependency sebagai Singleton
-   * 
-   * Singleton berarti hanya SATU instance yang dibuat dan digunakan selamanya.
-   * Cocok untuk: Repository, EventBus, Logger, Configuration, dll.
+   * Register binding sebagai Singleton
+   * Singleton = satu instance untuk seluruh aplikasi lifetime
    * 
    * @param token - Identifier untuk dependency (biasanya nama interface)
    * @param implementation - Constructor class yang akan di-instantiate
    * @param dependencies - List token dependencies yang dibutuhkan
    * 
-   * Contoh:
-   * container.registerSingleton<IProductRepository>('IProductRepository', ProductRepository);
+   * CONTOH PENGGUNAAN:
+   * container.registerSingleton<IEventBus>('IEventBus', EventBus);
    */
   registerSingleton<T>(token: Token, implementation: Constructor<T>, dependencies: Token[] = []): void {
     this.bindings.set(token, { 
@@ -74,17 +60,15 @@ export class Container {
   }
 
   /**
-   * Register dependency sebagai Transient
-   * 
-   * Transient berarti instance BARU dibuat setiap kali di-resolve.
-   * Cocok untuk: Use Cases, Handlers, dll yang stateless.
+   * Register binding sebagai Transient
+   * Transient = instance baru setiap kali di-resolve
    * 
    * @param token - Identifier untuk dependency
    * @param implementation - Constructor class yang akan di-instantiate
    * @param dependencies - List token dependencies yang dibutuhkan
    * 
-   * Contoh:
-   * container.registerTransient('CreateProductUseCase', CreateProductUseCase);
+   * CONTOH PENGGUNAAN:
+   * container.registerTransient<IUseCase>('CreateProductUseCase', CreateProductUseCase);
    */
   registerTransient<T>(token: Token, implementation: Constructor<T>, dependencies: Token[] = []): void {
     this.bindings.set(token, { 
@@ -96,79 +80,71 @@ export class Container {
   }
 
   /**
-   * Register dependency menggunakan Factory Function
-   * 
-   * Factory memberikan kontrol penuh atas bagaimana instance dibuat.
-   * Berguna untuk:
-   * - Complex dependencies
-   * - Cross-module wiring
-   * - Conditional instantiation
+   * Register menggunakan Factory function
+   * Factory = custom function untuk create instance
+   * Digunakan ketika dependency butuh parameter khusus atau cross-module wiring
    * 
    * @param token - Identifier untuk dependency
    * @param factory - Function yang return instance
-   * @param dependencies - List dependencies yang diperlukan factory
+   * @template T - Type dari dependency
    * 
-   * Contoh:
+   * CONTOH PENGGUNAAN:
    * container.registerFactory(
    *   'CreateOrderUseCase',
-   *   (orderRepo, inventoryChecker, reduceStockUseCase, eventBus) => 
-   *     new CreateOrderUseCase(orderRepo, inventoryChecker, reduceStockUseCase, eventBus),
-   *   ['IOrderRepository', 'IInventoryChecker', 'ReduceStockUseCase', 'IEventBus']
+   *   (orderRepo, inventoryChecker, reduceStockUseCase, eventBus) =>
+   *     new CreateOrderUseCase(orderRepo, inventoryChecker, reduceStockUseCase, eventBus)
    * );
    */
-  registerFactory<T>(token: Token, factory: Factory<T>, dependencies: Token[] = []): void {
+  registerFactory<T>(token: Token, factory: Factory<T>): void {
     this.bindings.set(token, { 
       implementation: factory, 
-      scope: 'transient',
-      dependencies
+      scope: 'transient' // Factory selalu transient
     });
-    console.log(`[Container] Registered Factory: ${token} with dependencies: [${dependencies.join(', ')}]`);
+    console.log(`[Container] Registered factory: ${token}`);
   }
 
   /**
-   * Resolve dependency berdasarkan token
+   * Resolve dependency dari container
+   * Mencari binding berdasarkan token dan return instance
    * 
-   * Method ini akan:
-   * 1. Cari binding untuk token
-   * 2. Cek circular dependency
-   * 3. Resolve semua dependencies recursively
-   * 4. Instantiate dan return instance
-   * 
-   * @param token - Identifier dependency yang akan di-resolve
+   * @param token - Identifier dependency yang ingin di-resolve
    * @returns Instance dari dependency
-   * @throws Error jika binding tidak ditemukan atau circular dependency terdeteksi
+   * @throws Error jika binding tidak ditemukan
+   * 
+   * FLOW RESOLUTION:
+   * 1. Cari binding berdasarkan token
+   * 2. Jika singleton dan sudah ada cached instance, return cached
+   * 3. Jika constructor, resolve dependencies dan instantiate
+   * 4. Jika factory, panggil factory function
+   * 5. Cache instance jika singleton
    */
   resolve<T>(token: Token): T {
+    // Cari binding
     const binding = this.bindings.get(token);
-    
-    // Validasi: binding harus ada
     if (!binding) {
       throw new Error(`[Container] No binding found for token: ${token}`);
     }
 
-    // Deteksi circular dependency
-    this.checkCircularDependency(token);
-
-    // Jika singleton dan sudah ada instance cached, return cached instance
+    // Jika singleton dan sudah ada cached instance, return langsung
     if (binding.scope === 'singleton' && binding.resolvedInstance) {
-      console.log(`[Container] Resolved (cached singleton): ${token}`);
+      console.log(`[Container] Resolved (cached) singleton: ${token}`);
       return binding.resolvedInstance;
     }
 
-    // Resolve dependencies
-    let resolvedDependencies: any[] = [];
-    
-    if (binding.dependencies && binding.dependencies.length > 0) {
-      // Resolve setiap dependency secara recursive
-      resolvedDependencies = binding.dependencies.map(depToken => {
-        console.log(`[Container] Resolving dependency: ${depToken} for ${token}`);
-        return this.resolve(depToken);
-      });
-    }
-
-    // Buat instance
+    // Buat instance berdasarkan type implementation
     let instance: T;
+    
     if (typeof binding.implementation === 'function') {
+      // Cek apakah ini constructor atau factory
+      // Factory dipanggil langsung, constructor di-instantiate dengan new
+      
+      // Untuk simplicity, kita asumsikan factory sudah di-register dengan registerFactory
+      // dan constructor dengan registerSingleton/registerTransient
+      
+      // Instantiate constructor dengan dependencies
+      // CATATAN: Ini simplified version - tidak ada automatic dependency resolution
+      // Dependencies harus di-pass manual via factory
+      instance = new (binding.implementation as Constructor<T>)();
       const proto = (binding.implementation as any).prototype;
       const isConstructor = proto !== undefined;
       if (isConstructor) {
@@ -180,12 +156,12 @@ export class Container {
       instance = new (binding.implementation as Constructor<T>)(...resolvedDependencies);
     }
 
-    // Cache instance untuk singleton
+    // Cache instance jika singleton
     if (binding.scope === 'singleton') {
       binding.resolvedInstance = instance;
     }
 
-    console.log(`[Container] Resolved: ${token}`);
+    console.log(`[Container] Resolved: ${token} (${binding.scope})`);
     return instance;
   }
 
@@ -202,9 +178,10 @@ export class Container {
       throw new Error(`[Container] Circular dependency detected: ${cycle}`);
     }
 
-    const dependencies = this.dependencyGraph.get(token) || [];
-    for (const dep of dependencies) {
-      this.checkCircularDependency(dep, [...visited, token]);
+    if (binding.scope === 'singleton') {
+      binding.resolvedInstance = instance;
     }
+
+    return instance;
   }
 }

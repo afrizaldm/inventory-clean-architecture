@@ -1,16 +1,20 @@
 /**
- * Value Object: Quantity
+ * ============================================================================
+ * INVENTORY MODULE - Quantity Value Object
+ * ============================================================================
+ * Value Object untuk merepresentasikan quantity/jumlah produk.
  * 
- * Value Object adalah objek yang didefinisikan oleh atributnya, bukan oleh identity.
- * Quantity mewakili jumlah produk dan memiliki validasi business rule:
- * - Tidak boleh negatif
+ * KARAKTERISTIK VALUE OBJECT:
+ * 1. Immutable - tidak bisa diubah setelah dibuat
+ * 2. Diidentifikasi oleh nilai/atributnya, bukan ID
+ * 3. Bisa memiliki validasi internal
  * 
- * Value Objects sebaiknya immutable (tidak bisa diubah setelah dibuat)
+ * DOMAIN LAYER - TIDAK BOLEH IMPORT DARI LUAR DOMAIN!
  */
+
 export class Quantity {
   /**
-   * Nilai quantity disimpan sebagai private readonly
-   * untuk memastikan immutability
+   * Nilai quantity (private untuk enforce immutability)
    */
   private readonly _value: number;
 
@@ -20,7 +24,7 @@ export class Quantity {
    * @throws Error jika nilai negatif
    */
   constructor(value: number) {
-    // Business rule: Quantity tidak boleh negatif
+    // Validasi business rule: quantity tidak boleh negatif
     if (value < 0) {
       throw new Error('Quantity cannot be negative');
     }
@@ -29,7 +33,7 @@ export class Quantity {
 
   /**
    * Getter untuk mengakses nilai quantity
-   * @returns Nilai quantity
+   * Return readonly untuk maintain immutability
    */
   get value(): number {
     return this._value;
@@ -52,8 +56,24 @@ export class Quantity {
   }
 
   /**
-   * Membandingkan apakah quantity ini sama dengan quantity lain
-   * @param other - Quantity lain untuk dibandingkan
+   * Alias untuk value - returns nilai numerik
+   */
+  toNumber(): number {
+    return this._value;
+  }
+
+  /**
+   * Check apakah quantity ini cukup untuk quantity lain
+   * @param other - Quantity yang akan dicek
+   * @returns true jika quantity ini >= other
+   */
+  isSufficientFor(other: Quantity): boolean {
+    return this._value >= other.value;
+  }
+
+  /**
+   * Bandingkan dengan Quantity lain
+   * @param other - Quantity yang dibandingkan
    * @returns true jika nilai sama
    */
   equals(other: Quantity): boolean {
@@ -61,22 +81,20 @@ export class Quantity {
   }
 
   /**
-   * Menambahkan quantity ini dengan quantity lain
-   * Mengembalikan instance baru (immutable)
-   * @param other - Quantity yang akan ditambahkan
-   * @returns Quantity baru hasil penjumlahan
+   * Cek apakah quantity ini lebih besar dari other
+   * @param other - Quantity pembanding
+   * @returns true jika this > other
    */
-  add(other: Quantity): Quantity {
-    return new Quantity(this._value + other.value);
+  isGreaterThan(other: Quantity): boolean {
+    return this._value > other.value;
   }
 
   /**
-   * Mengurangi quantity ini dengan quantity lain
-   * Mengembalikan instance baru (immutable)
-   * @param other - Quantity yang akan dikurangkan
-   * @returns Quantity baru hasil pengurangan
+   * Cek apakah quantity ini cukup untuk memenuhi request
+   * @param required - Jumlah yang dibutuhkan
+   * @returns true jika quantity >= required
    */
-  subtract(other: Quantity): Quantity {
-    return new Quantity(this._value - other.value);
+  isSufficient(required: number): boolean {
+    return this._value >= required;
   }
 }

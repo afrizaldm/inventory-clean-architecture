@@ -9,15 +9,17 @@ import { IEventHandler } from '@/types';
  */
 export interface IEventBus {
   /**
-   * Publish/mengirim event ke semua handler yang subscribe
-   * @param event - Event object yang akan dipublish
+   * Publish event ke semua handler yang subscribed
+   * @param event - Event yang akan dipublish
+   * @template T - Tipe event yang dipublish
    */
   publish<T>(event: T): void;
-  
+
   /**
-   * Subscribe/register handler untuk tipe event tertentu
+   * Subscribe handler ke event type tertentu
    * @param eventType - Nama tipe event (biasanya constructor name)
-   * @param handler - Handler yang akan dipanggil saat event dipublish
+   * @param handler - Handler yang akan menangani event
+   * @template T - Tipe event yang disubscribe
    */
   subscribe<T>(eventType: string, handler: IEventHandler<T>): void;
 }

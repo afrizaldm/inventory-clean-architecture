@@ -7,25 +7,20 @@ import { InventoryCheckerAdapter } from '@/modules/inventory/infrastructure/adap
 import { IInventoryChecker } from '@/modules/order/contracts/IInventoryChecker';
 
 /**
- * Registrasi Inventory Module Dependencies
+ * Registrasi semua Inventory module dependencies
+ * @param container - DI Container instance
  * 
- * Function ini mendaftarkan semua dependencies yang dimiliki oleh modul Inventory.
- * Ini termasuk:
- * - Repositories
- * - Use Cases
- * - Adapters (untuk cross-module communication)
- * 
- * Perhatikan bahwa Event Handlers TIDAK diregistrasi di sini karena
- * mereka akan di-subscribe secara manual di Composition Root.
+ * DEPENDENCIES YANG DIREGISTRASI:
+ * 1. IProductRepository -> ProductRepository (Singleton)
+ * 2. IInventoryChecker -> InventoryCheckerAdapter (Singleton)
+ * 3. CreateProductUseCase (Transient)
+ * 4. ReduceStockUseCase (Transient)
  */
 export function registerInventoryModule(container: Container): void {
-  console.log('=== Registering Inventory Module ===');
-  
-  // ============================================
-  // Register Repositories (Singleton)
-  // ============================================
-  // Repository harus singleton karena mengelola state (in-memory storage)
-  // Jika transient, setiap use case akan punya repository terpisah dengan data berbeda
+  console.log('[Registration] Registering Inventory module dependencies...');
+
+  // ========== REPOSITORIES ==========
+  // Singleton karena stateful (in-memory storage)
   container.registerSingleton<IProductRepository>('IProductRepository', ProductRepository);
   
   // ============================================
@@ -49,17 +44,15 @@ export function registerInventoryModule(container: Container): void {
   // CreateProductUseCase hanya butuh IProductRepository
   container.registerFactory(
     'CreateProductUseCase',
-    (productRepo: IProductRepository) => new CreateProductUseCase(productRepo),
-    ['IProductRepository']
+    (productRepo: IProductRepository) => new CreateProductUseCase(productRepo)
   );
-  
+
   // ReduceStockUseCase butuh IProductRepository dan IEventBus
   container.registerFactory(
     'ReduceStockUseCase',
     (productRepo: IProductRepository, eventBus: any) => 
-      new ReduceStockUseCase(productRepo, eventBus),
-    ['IProductRepository', 'IEventBus']
+      new ReduceStockUseCase(productRepo, eventBus)
   );
-  
-  console.log('=== Inventory Module Registered ===\n');
+
+  console.log('[Registration] Inventory module dependencies registered successfully');
 }

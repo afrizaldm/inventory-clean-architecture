@@ -1,8 +1,7 @@
 /**
  * ============================================================================
- * MAIN APPLICATION ENTRY POINT - COMPOSITION ROOT
+ * BOOTSTRAP - Main Application Entry Point (Composition Root)
  * ============================================================================
- * 
  * File ini adalah COMPOSITION ROOT dari aplikasi.
  * Composition Root adalah tempat di mana semua dependencies di-wire dan
  * aplikasi di-bootstrap.
@@ -37,80 +36,95 @@ import { IProductRepository } from '@/modules/inventory/domain/repositories/IPro
 // STEP 1: CREATE CONTAINER
 // ============================================================================
 // Buat satu instance container untuk seluruh aplikasi
-// Container ini akan menyimpan semua bindings dan mengelola lifecycle dependencies
+// Ini adalah "Service Locator" pattern
 const container = new Container();
+
+console.log('\n========================================');
+console.log('🚀 Starting Hexagonal Modular Monolith');
+console.log('========================================\n');
 
 // ============================================================================
 // STEP 2: REGISTER ALL MODULES
 // ============================================================================
-// Panggil registration function dari setiap modul
-// Urutan penting: shared dependencies harus diregistrasi dulu
-console.log('\n' + '='.repeat(60));
-console.log('BOOTSTRAPPING APPLICATION - COMPOSITION ROOT');
-console.log('='.repeat(60));
+// Panggil registration functions dari setiap modul
+// Urutan: Shared -> Inventory -> Order
 
-// Registrasi shared dependencies (EventBus, Logger) terlebih dahulu
-// karena modul lain mungkin membutuhkannya
 registerSharedDependencies(container);
-
-// Registrasi Inventory Module
-// Ini mendaftarkan: ProductRepository, InventoryCheckerAdapter, Use Cases
 registerInventoryModule(container);
-
-// Registrasi Order Module
-// Ini mendaftarkan: OrderRepository, CreateOrderUseCase
-// Perhatikan bahwa CreateOrderUseCase butuh dependencies dari Inventory Module
 registerOrderModule(container);
 
 // ============================================================================
-// STEP 3: SUBSCRIBE EVENT HANDLERS
+// STEP 3: WIRE CROSS-MODULE DEPENDENCIES
 // ============================================================================
-// Event handlers harus di-subscribe setelah semua modul diregistrasi
-// agar event bus sudah tersedia dan bisa menerima events
+// Di sinilah magic terjadi! Kita wire dependencies yang melibatkan multiple modules.
+// 
+// CreateOrderUseCase butuh 4 dependencies:
+// 1. IOrderRepository (dari Order module)
+// 2. IInventoryChecker (dari Inventory module - cross-module!)
+// 3. ReduceStockUseCase (dari Inventory module - cross-module!)
+// 4. IEventBus (dari Shared module)
+//
+// Karena kompleksitas ini, kita gunakan factory function
 
-console.log('=== Subscribing Event Handlers ===');
+container.registerFactory(
+  'CreateOrderUseCase',
+  (): CreateOrderUseCase => {
+    const orderRepo = container.resolve<IOrderRepository>('IOrderRepository');
+    const inventoryChecker = container.resolve<IInventoryChecker>('IInventoryChecker');
+    const reduceStockUseCase = container.resolve<ReduceStockUseCase>('ReduceStockUseCase');
+    const eventBus = container.resolve<IEventBus>('IEventBus');
+    
+    return new CreateOrderUseCase(orderRepo, inventoryChecker, reduceStockUseCase, eventBus);
+  }
+);
 
-// Resolve EventBus dari container (singleton, jadi akan return instance yang sama)
+console.log('[Bootstrap] Cross-module dependencies wired successfully\n');
+
+// ============================================================================
+// STEP 4: SUBSCRIBE EVENT HANDLERS
+// ============================================================================
+// Resolve shared services
 const eventBus = container.resolve<IEventBus>('IEventBus');
-
-// Resolve Logger dari container
 const logger = container.resolve<ILogger>('ILogger');
 
-// Buat handler instances dan subscribe ke event bus
-// Handler ini akan merespon domain events yang dipublish oleh use cases
-
-// ProductStockReducedHandler: Menangani event stock berkurang
+// Create event handler instances
 const productStockReducedHandler = new ProductStockReducedHandler(logger);
-eventBus.subscribe<ProductStockReduced>('ProductStockReduced', productStockReducedHandler);
-
-// OrderCreatedHandler: Menangani event order dibuat
 const orderCreatedHandler = new OrderCreatedHandler(logger);
+
+// Subscribe handlers ke event bus
+// CATATAN: Event type harus sama dengan constructor name class event
+eventBus.subscribe<ProductStockReduced>('ProductStockReduced', productStockReducedHandler);
 eventBus.subscribe<OrderCreated>('OrderCreated', orderCreatedHandler);
 
-console.log('=== Event Handlers Subscribed ===\n');
+console.log('[Bootstrap] Event handlers subscribed\n');
 
 // ============================================================================
-// STEP 4: SETUP HTTP SERVER (EXPRESS)
+// STEP 5: SETUP HTTP SERVER (DRIVING ADAPTER)
 // ============================================================================
-// Setup Express sebagai HTTP adapter (Driving Adapter / Primary Port)
-// HTTP routes akan resolve use cases dari container dan invoke mereka
+// Express.js sebagai Driving Adapter
+// HTTP requests akan trigger use cases
 
 const app = express();
-app.use(express.json()); // Parse JSON body
+app.use(express.json());
 
-// ----------------------------------------------------------------------------
-// HTTP Route: POST /products
-// Endpoint untuk membuat produk baru
-// ----------------------------------------------------------------------------
+// ========== INVENTORY ROUTES ==========
+
+/**
+ * POST /products
+ * Create product baru
+ * 
+ * FLOW:
+ * HTTP Request -> Route -> Use Case -> Domain Entity -> Repository -> Database
+ */
 app.post('/products', async (req: Request, res: Response) => {
-  console.log('\n[HTTP] POST /products received');
-  console.log('[HTTP] Body:', JSON.stringify(req.body, null, 2));
-  
   try {
+    console.log('\n[HTTP] POST /products received');
+    console.log('[HTTP] Request body:', JSON.stringify(req.body, null, 2));
+
     // Resolve use case dari container
     const useCase = container.resolve<CreateProductUseCase>('CreateProductUseCase');
     
-    // Execute use case dengan data dari request
+    // Execute use case
     const result = await useCase.execute({
       id: req.body.id,
       name: req.body.name,
@@ -118,45 +132,84 @@ app.post('/products', async (req: Request, res: Response) => {
       initialStock: req.body.initialStock
     });
     
-    // Return response berdasarkan hasil use case
+    // Return response
     if (result.success) {
       res.status(201).json(result);
     } else {
       res.status(400).json(result);
     }
   } catch (error: any) {
-    console.error('[HTTP] Error:', error.message);
+    console.error('[HTTP] Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// ----------------------------------------------------------------------------
-// HTTP Route: POST /orders
-// Endpoint untuk membuat order baru
-// ----------------------------------------------------------------------------
-app.post('/orders', async (req: Request, res: Response) => {
-  console.log('\n[HTTP] POST /orders received');
-  console.log('[HTTP] Body:', JSON.stringify(req.body, null, 2));
-  
+/**
+ * GET /products/:id
+ * Get product by ID
+ */
+app.get('/products/:id', async (req: Request, res: Response) => {
   try {
+    console.log(`\n[HTTP] GET /products/${req.params.id} received`);
+
+    const productRepo = container.resolve<IProductRepository>('IProductRepository');
+    const product = await productRepo.findById(req.params.id);
+    
+    if (product) {
+      res.json({
+        id: product.id,
+        name: product.name,
+        price: product.price / 100, // Convert dari sen ke Rupiah
+        stock: product.quantity.value
+      });
+    } else {
+      res.status(404).json({ message: 'Product not found' });
+    }
+  } catch (error: any) {
+    console.error('[HTTP] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ========== ORDER ROUTES ==========
+
+/**
+ * POST /orders
+ * Create order baru
+ * 
+ * FLOW:
+ * HTTP Request -> Route -> CreateOrderUseCase
+ *   -> IInventoryChecker.checkStock() (cross-module!)
+ *   -> Create Order Entity
+ *   -> Save Order
+ *   -> ReduceStockUseCase.execute() (cross-module!)
+ *      -> ProductStockReduced Event Published
+ *         -> ProductStockReducedHandler.handle()
+ *   -> OrderCreated Event Published
+ *      -> OrderCreatedHandler.handle()
+ */
+app.post('/orders', async (req: Request, res: Response) => {
+  try {
+    console.log('\n[HTTP] POST /orders received');
+    console.log('[HTTP] Request body:', JSON.stringify(req.body, null, 2));
+
     // Resolve use case dari container
     const useCase = container.resolve<CreateOrderUseCase>('CreateOrderUseCase');
     
-    // Execute use case dengan data dari request
+    // Execute use case
     const result = await useCase.execute({
       id: req.body.id,
       customerId: req.body.customerId,
       items: req.body.items
     });
     
-    // Return response berdasarkan hasil use case
     if (result.success) {
       res.status(201).json(result);
     } else {
       res.status(400).json(result);
     }
   } catch (error: any) {
-    console.error('[HTTP] Error:', error.message);
+    console.error('[HTTP] Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -213,35 +266,24 @@ app.listen(PORT, () => {
   console.log('  GET  /products/:id - Get product details');
   console.log('\nRunning demo flow in 2 seconds...\n');
   
-  // Jalankan demo flow setelah server siap
-  setTimeout(runDemoFlow, 2000);
+  // Auto-run demo setelah server siap
+  setTimeout(runDemo, 500);
 });
 
 // ============================================================================
-// DEMO FLOW
+// STEP 6: DEMO FLOW
 // ============================================================================
-// Function ini menjalankan flow lengkap untuk mendemonstrasikan:
-// 1. Create product dengan stock tertentu
-// 2. Create order yang berhasil (stock cukup)
-// 3. Create order yang gagal (stock tidak cukup)
-// 
-// Flow ini menunjukkan:
-// - Komunikasi antar modul (Order -> Inventory)
-// - Domain events dan handlers
-// - Business rules validation
-// ============================================================================
+// Demonstrasi complete flow dari Hexagonal Architecture
 
-async function runDemoFlow(): Promise<void> {
-  console.log('\n' + '🚀 '.repeat(30));
-  console.log('STARTING DEMO FLOW');
-  console.log('🚀 '.repeat(30) + '\n');
-  
+async function runDemo(): Promise<void> {
+  console.log('🎬 ==============================================');
+  console.log('🎬 STARTING DEMO FLOW');
+  console.log('🎬 ==============================================\n');
+
   try {
-    // ------------------------------------------------------------------------
-    // DEMO STEP 1: Create product "Laptop" dengan stock 10
-    // ------------------------------------------------------------------------
-    console.log('📦 STEP 1: Creating product "Gaming Laptop" with stock 10...');
-    console.log('-'.repeat(60));
+    // ========== SCENARIO 1: Create Product ==========
+    console.log('📦 SCENARIO 1: Create product "Gaming Laptop" with stock 10');
+    console.log('-----------------------------------------------------------');
     
     const createProductUseCase = container.resolve<CreateProductUseCase>('CreateProductUseCase');
     const productResult = await createProductUseCase.execute({
@@ -251,84 +293,62 @@ async function runDemoFlow(): Promise<void> {
       initialStock: 10
     });
     
-    console.log('✅ Product created:', productResult);
+    console.log('✅ Result:', JSON.stringify(createProductResult, null, 2));
     console.log('');
-    
-    // ------------------------------------------------------------------------
-    // DEMO STEP 2: Create order untuk 2 Laptop (should succeed)
-    // ------------------------------------------------------------------------
-    console.log('🛒 STEP 2: Creating order for 2 "Gaming Laptop"...');
-    console.log('-'.repeat(60));
+
+    // ========== SCENARIO 2: Create Successful Order ==========
+    console.log('🛒 SCENARIO 2: Create order for 2 "Gaming Laptop"');
+    console.log('-----------------------------------------------------------');
     console.log('   This will:');
     console.log('   1. Check stock via IInventoryChecker (cross-module)');
     console.log('   2. Create order entity');
-    console.log('   3. Reduce stock (trigger ProductStockReduced event)');
-    console.log('   4. Publish OrderCreated event');
+    console.log('   3. Reduce stock via ReduceStockUseCase (cross-module)');
+    console.log('   4. Publish ProductStockReduced event');
+    console.log('   5. Publish OrderCreated event\n');
+    
+    const createOrderResult = await container.resolve<CreateOrderUseCase>('CreateOrderUseCase')
+      .execute({
+        id: 'order-001',
+        customerId: 'customer-001',
+        items: [
+          { productId: 'prod-laptop-001', quantity: 2 }
+        ]
+      });
+    
+    console.log('✅ Result:', JSON.stringify(createOrderResult, null, 2));
     console.log('');
+
+    // ========== SCENARIO 3: Create Order with Insufficient Stock ==========
+    console.log('❌ SCENARIO 3: Try to create order for 15 "Gaming Laptop"');
+    console.log('-----------------------------------------------------------');
+    console.log('   Current stock is only 8 (10 - 2 from previous order)');
+    console.log('   This should FAIL with insufficient stock error\n');
     
-    const createOrderUseCase = container.resolve<CreateOrderUseCase>('CreateOrderUseCase');
-    const orderResult1 = await createOrderUseCase.execute({
-      id: 'order-001',
-      customerId: 'customer-john',
-      items: [
-        { productId: 'prod-laptop-001', quantity: 2 }
-      ]
-    });
+    const failedOrderResult = await container.resolve<CreateOrderUseCase>('CreateOrderUseCase')
+      .execute({
+        id: 'order-002',
+        customerId: 'customer-002',
+        items: [
+          { productId: 'prod-laptop-001', quantity: 15 }
+        ]
+      });
     
-    console.log('✅ Order created:', orderResult1);
+    console.log('✅ Expected failure:', JSON.stringify(failedOrderResult, null, 2));
     console.log('');
+
+    // ========== SUMMARY ==========
+    console.log('🎬 ==============================================');
+    console.log('🎬 DEMO FLOW COMPLETED SUCCESSFULLY!');
+    console.log('🎬 ==============================================\n');
     
-    // ------------------------------------------------------------------------
-    // DEMO STEP 3: Create order lagi untuk 8 Laptop (should succeed, stock = 8)
-    // ------------------------------------------------------------------------
-    console.log('🛒 STEP 3: Creating another order for 8 "Gaming Laptop"...');
-    console.log('-'.repeat(60));
-    
-    const orderResult2 = await createOrderUseCase.execute({
-      id: 'order-002',
-      customerId: 'customer-jane',
-      items: [
-        { productId: 'prod-laptop-001', quantity: 8 }
-      ]
-    });
-    
-    console.log('✅ Order created:', orderResult2);
-    console.log('');
-    
-    // ------------------------------------------------------------------------
-    // DEMO STEP 4: Create order untuk 5 Laptop (should FAIL, stock = 0)
-    // ------------------------------------------------------------------------
-    console.log('❌ STEP 4: Trying to create order for 5 "Gaming Laptop"...');
-    console.log('-'.repeat(60));
-    console.log('   Expected: FAILURE (insufficient stock)');
-    console.log('');
-    
-    const orderResult3 = await createOrderUseCase.execute({
-      id: 'order-003',
-      customerId: 'customer-bob',
-      items: [
-        { productId: 'prod-laptop-001', quantity: 5 }
-      ]
-    });
-    
-    console.log('🚫 Order failed as expected:', orderResult3);
-    console.log('');
-    
-    // ------------------------------------------------------------------------
-    // DEMO COMPLETE
-    // ------------------------------------------------------------------------
-    console.log('\n' + '✨ '.repeat(30));
-    console.log('DEMO FLOW COMPLETED SUCCESSFULLY!');
-    console.log('✨ '.repeat(30));
-    console.log('\nKey learnings from this demo:');
-    console.log('1. ✅ Modules communicate via interfaces (IInventoryChecker)');
-    console.log('2. ✅ Domain events are published and handled automatically');
-    console.log('3. ✅ Business rules prevent overselling (stock validation)');
-    console.log('4. ✅ Dependency Injection enables loose coupling');
-    console.log('5. ✅ Composition Root wires all dependencies together\n');
-    
+    console.log('📚 KEY LEARNING POINTS:');
+    console.log('   1. ✅ Domain layer tidak bergantung pada infrastructure');
+    console.log('   2. ✅ Modules berkomunikasi via interfaces (IInventoryChecker)');
+    console.log('   3. ✅ Cross-module dependencies di-wiring di Composition Root');
+    console.log('   4. ✅ Domain Events dipublish dan dihandle secara loose-coupling');
+    console.log('   5. ✅ HTTP requests trigger use cases melalui Driving Adapter\n');
+
   } catch (error: any) {
-    console.error('❌ Demo flow error:', error.message);
-    console.error(error.stack);
+    console.error('❌ Demo failed:', error);
   }
 }

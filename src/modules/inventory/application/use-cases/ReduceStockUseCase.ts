@@ -5,17 +5,17 @@ import { ProductStockReduced } from '@/modules/inventory/domain/events/ProductSt
 import { IEventBus } from '@/shared/kernel/IEventBus';
 
 /**
- * Interface untuk input/request ReduceStockUseCase
+ * Input DTO untuk ReduceStockUseCase
  */
 export interface ReduceStockRequest {
-  /** ID produk yang akan dikurangi stock-nya */
+  /** ID produk yang stock-nya akan dikurangi */
   productId: string;
-  /** Jumlah stock yang akan dikurangi */
+  /** Jumlah stock yang dikurangi */
   amount: number;
 }
 
 /**
- * Interface untuk output/response ReduceStockUseCase
+ * Output DTO untuk ReduceStockUseCase
  */
 export interface ReduceStockResponse {
   /** Apakah operasi berhasil */
@@ -29,33 +29,18 @@ export interface ReduceStockResponse {
 }
 
 /**
- * Use Case: ReduceStockUseCase
- * 
- * Use case ini bertanggung jawab untuk mengurangi stock produk.
- * Ini adalah contoh use case yang:
- * 1. Memodifikasi state entity
- * 2. Memicu Domain Event setelah perubahan
- * 
- * Alur:
- * 1. Validasi input
- * 2. Ambil product dari repository
- * 3. Kurangi stock menggunakan business logic di entity
- * 4. Update repository
- * 5. Publish event ProductStockReduced
- * 
- * Event publishing memungkinkan loose coupling:
- * - Use case tidak perlu tahu siapa yang handle event
- * - Handler lain bisa subscribe tanpa mengubah use case
+ * ReduceStockUseCase Class
+ * Responsible untuk orchestrasi pengurangan stock
  */
 export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceStockResponse> {
   /**
    * Constructor dengan dependency injection
-   * 
-   * @param productRepository - Repository untuk akses data product
+   * @param productRepository - Repository untuk persist product
    * @param eventBus - Event bus untuk publish domain events
    * 
-   * EventBus di-inject agar use case bisa publish event tanpa
-   * bergantung pada implementasi konkret event bus
+   * CATATAN: Use case ini butuh 2 dependencies:
+   * 1. IProductRepository - untuk akses data
+   * 2. IEventBus - untuk publish events
    */
   constructor(
     private productRepository: IProductRepository,
@@ -63,18 +48,21 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
   ) {}
 
   /**
-   * Execute use case ini dengan request yang diberikan
+   * Eksekusi use case
+   * @param request - Input data untuk reduce stock
+   * @returns Response dengan status dan result
    * 
-   * @param request - Data untuk mengurangi stock
-   * @returns Response dengan status dan hasil operasi
+   * FLOW DETAIL:
+   * 1. Validasi amount harus positif
+   * 2. Fetch product dari repository
+   * 3. Panggil method reduceStock() di entity
+   * 4. Jika gagal (stock tidak cukup), return error
+   * 5. Jika berhasil, update repository
+   * 6. Publish domain event
    */
   async execute(request: ReduceStockRequest): Promise<ReduceStockResponse> {
     try {
-      // ============================================
-      // STEP 1: Validasi input
-      // ============================================
-      
-      // Validasi: Jumlah pengurangan harus lebih dari 0
+      // ========== STEP 1: Validasi Input ==========
       if (request.amount <= 0) {
         return {
           success: false,
@@ -82,11 +70,7 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
         };
       }
 
-      // ============================================
-      // STEP 2: Ambil entity dari repository
-      // ============================================
-      
-      // Cari produk berdasarkan ID
+      // ========== STEP 2: Fetch Product ==========
       const product = await this.productRepository.findById(request.productId);
       if (!product) {
         return {
@@ -113,11 +97,8 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
       // Simpan perubahan ke repository
       await this.productRepository.save(product);
 
-      // ============================================
-      // STEP 5: Publish Domain Event
-      // ============================================
-      
-      // Buat event bahwa stock telah berkurang
+      // ========== STEP 5: Publish Domain Event ==========
+      // Buat event dengan data lengkap untuk audit trail
       const event = new ProductStockReduced({
         productId: product.id,
         oldQuantity: previousQuantity,
@@ -125,14 +106,10 @@ export class ReduceStockUseCase implements IUseCase<ReduceStockRequest, ReduceSt
         reducedBy: request.amount
       });
 
-      // Publish event ke event bus
-      // Handler yang subscribe akan menerima event ini
+      // Publish ke event bus - semua subscribed handlers akan dipanggil
       this.eventBus.publish(event);
 
-      // ============================================
-      // STEP 6: Return response sukses
-      // ============================================
-      
+      // ========== STEP 6: Return Success Response ==========
       return {
         success: true,
         message: 'Stock reduced successfully',
