@@ -1,0 +1,32 @@
+{
+  "name": "hexagonal-clean-architecture-demo",
+  "version": "1.0.0",
+  "description": "Complete implementation of Hexagonal/Clean Architecture with Modular Monolith using TypeScript - Educational Project",
+  "main": "dist/bootstrap/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/bootstrap/main.js",
+    "dev": "ts-node src/bootstrap/main.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "architecture",
+    "clean-architecture",
+    "hexagonal-architecture",
+    "modular-monolith",
+    "typescript",
+    "dependency-injection",
+    "domain-driven-design"
+  ],
+  "author": "Educational Purpose",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.8.2",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}
