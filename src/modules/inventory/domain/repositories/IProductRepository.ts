@@ -1,4 +1,4 @@
-import { Product } from "../entities/product";
+import { Product } from "@/modules/inventory/domain/entities/product";
 
 /**
  * Interface: IProductRepository
@@ -35,4 +35,18 @@ export interface IProductRepository {
    * @param product - Product entity yang akan di update
    */
   update(product: Product): Promise<void>;
+
+  /**
+   * Mencari Product berdasarkan nama (case insensitive)
+   * @param name - Nama produk
+   * @returns Product jika ditemukan, null jika tidak
+   */
+  findByName(name: string): Promise<Product | null>;
+
+  /**
+   * Mengecek apakah Product dengan ID tertentu sudah ada
+   * @param id - ID unik produk
+   * @returns true jika ada, false jika tidak
+   */
+  existsById(id: string): Promise<boolean>;
 }

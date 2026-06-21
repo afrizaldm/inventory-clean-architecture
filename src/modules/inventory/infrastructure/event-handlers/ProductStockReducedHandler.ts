@@ -1,6 +1,6 @@
-import { IEventHandler } from '../../../../types';
-import { ProductStockReduced } from '../../domain/events/ProductStockReduced';
-import { ILogger } from '../../../../shared/infrastructure/services/Logger';
+import { IEventHandler } from '@/types';
+import { ProductStockReduced } from '@/modules/inventory/domain/events/ProductStockReduced';
+import { ILogger } from '@/shared/infrastructure/services/Logger';
 
 /**
  * Event Handler: ProductStockReducedHandler

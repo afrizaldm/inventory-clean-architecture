@@ -9,9 +9,9 @@
  * Ini adalah contoh dari Event-Driven Architecture dalam Hexagonal Architecture.
  */
 
-import { EventHandler } from '../../../../shared/kernel';
-import { ProductStockReduced } from '../../domain/events/product-stock-reduced';
-import { Logger } from '../../../../shared/kernel';
+import { EventHandler } from '@/shared/kernel';
+import { ProductStockReduced } from '@/modules/inventory/domain/events/ProductStockReduced';
+import { ILogger } from '@/shared/infrastructure/services/Logger';
 
 /**
  * ProductStockReducedListener
@@ -20,7 +20,7 @@ import { Logger } from '../../../../shared/kernel';
  * Dipasang ke Event Bus di Composition Root.
  */
 export class ProductStockReducedListener implements EventHandler<ProductStockReduced> {
-  constructor(private logger: Logger) {}
+  constructor(private logger: ILogger) {}
 
   /**
    * Handle the ProductStockReduced event
@@ -29,11 +29,13 @@ export class ProductStockReducedListener implements EventHandler<ProductStockRed
    */
   async handle(event: ProductStockReduced): Promise<void> {
     this.logger.info(
-      `📦 STOCK REDUCED EVENT: "${event.productName}" stock reduced from ${event.oldStock} to ${event.newStock} (-${event.reducedQuantity})`,
+      `📦 STOCK REDUCED EVENT: "${event.productId}" stock reduced from ${event.oldQuantity} to ${event.newQuantity} (-${event.reducedBy})`,
       {
-        eventId: event.eventId,
         productId: event.productId,
-        occurredOn: event.occurredOn,
+        oldQuantity: event.oldQuantity,
+        newQuantity: event.newQuantity,
+        reducedBy: event.reducedBy,
+        occurredAt: event.occurredAt,
       }
     );
 

@@ -1,6 +1,6 @@
-import { IEventHandler } from '../../../../types';
-import { OrderCreated } from '../../domain/events/OrderCreated';
-import { ILogger } from '../../../../shared/infrastructure/services/Logger';
+import { IEventHandler } from '@/types';
+import { OrderCreated } from '@/modules/order/domain/events/OrderCreated';
+import { ILogger } from '@/shared/infrastructure/services/Logger';
 
 /**
  * Event Handler: OrderCreatedHandler

@@ -7,8 +7,8 @@
  * Domain Layer - TIDAK boleh import dari luar domain (no framework, no database)
  */
 
-import { Entity } from '../../../../shared/kernel';
-import { Money } from '../../../../shared/kernel/value-objects';
+import { Entity } from '@/shared/kernel';
+import { Money } from '@/modules/inventory/domain/value-objects/Money';
 
 /**
  * Order ID Value Object (wrapped primitive)

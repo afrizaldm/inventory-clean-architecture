@@ -1,7 +1,7 @@
-import { Container } from '../bootstrap/container';
-import { EventBus } from './infrastructure/services/EventBus';
-import { IEventBus } from './kernel/IEventBus';
-import { ConsoleLogger, ILogger } from './infrastructure/services/Logger';
+import { Container } from '@/bootstrap/container';
+import { EventBus } from '@/shared/infrastructure/services/EventBus';
+import { IEventBus } from '@/shared/kernel/IEventBus';
+import { ConsoleLogger, ILogger } from '@/shared/infrastructure/services/Logger';
 
 /**
  * Registrasi Shared Dependencies

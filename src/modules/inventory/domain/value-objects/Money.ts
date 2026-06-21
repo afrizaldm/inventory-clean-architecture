@@ -13,18 +13,21 @@ export class Money {
    * readonly untuk memastikan immutability
    */
   private readonly _amount: number;
+  private readonly _currency: string;
 
   /**
    * Constructor dengan validasi
    * @param amount - Jumlah dalam satuan terkecil (misalnya sen)
+   * @param currency - Mata uang (default: 'IDR')
    * @throws Error jika amount negatif
    */
-  constructor(amount: number) {
+  constructor(amount: number, currency: string = 'IDR') {
     // Business rule: Money tidak boleh negatif
     if (amount < 0) {
       throw new Error('Money amount cannot be negative');
     }
     this._amount = amount;
+    this._currency = currency;
   }
 
   /**
@@ -33,6 +36,17 @@ export class Money {
    */
   get amount(): number {
     return this._amount;
+  }
+
+  /**
+   * Getter untuk mata uang
+   */
+  get currency(): string {
+    return this._currency;
+  }
+
+  toString(): string {
+    return `${this._currency} ${(this._amount / 100).toFixed(2)}`;
   }
 
   /**

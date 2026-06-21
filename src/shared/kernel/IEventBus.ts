@@ -1,4 +1,4 @@
-import { IEventHandler } from '../../types';
+import { IEventHandler } from '@/types';
 
 /**
  * Interface untuk Event Bus (Pub/Sub pattern)

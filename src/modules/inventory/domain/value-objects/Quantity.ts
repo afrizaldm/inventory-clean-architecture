@@ -36,6 +36,22 @@ export class Quantity {
   }
 
   /**
+   * Alias untuk value - returns nilai numerik
+   */
+  toNumber(): number {
+    return this._value;
+  }
+
+  /**
+   * Check apakah quantity ini cukup untuk quantity lain
+   * @param other - Quantity yang akan dicek
+   * @returns true jika quantity ini >= other
+   */
+  isSufficientFor(other: Quantity): boolean {
+    return this._value >= other.value;
+  }
+
+  /**
    * Membandingkan apakah quantity ini sama dengan quantity lain
    * @param other - Quantity lain untuk dibandingkan
    * @returns true jika nilai sama

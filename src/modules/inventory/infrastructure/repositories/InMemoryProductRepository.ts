@@ -8,8 +8,8 @@
  * tanpa mengubah domain atau application layer.
  */
 
-import { IProductRepository } from '../../domain/repositories/i-product-repository';
-import { Product, ProductId } from '../../domain/entities/product';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
+import { Product, ProductId } from '@/modules/inventory/domain/entities/product';
 
 /**
  * InMemoryProductRepository
@@ -56,6 +56,13 @@ export class InMemoryProductRepository implements IProductRepository {
    * Save or update product
    */
   async save(product: Product): Promise<void> {
+    this.storage.set(product.id, product);
+  }
+
+  /**
+   * Update existing product
+   */
+  async update(product: Product): Promise<void> {
     this.storage.set(product.id, product);
   }
 

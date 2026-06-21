@@ -1,4 +1,4 @@
-import { Order } from '../entities/Order';
+import { Order } from '@/modules/order/domain/entities/order';
 
 /**
  * Interface: IOrderRepository

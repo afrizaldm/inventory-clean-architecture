@@ -1,11 +1,11 @@
-import { IUseCase } from '../../../../types';
-import { Order, OrderItem, OrderStatus } from '../../domain/entities/order';
-import { Money } from '../../../../shared/kernel/value-objects';
-import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
-import { IInventoryChecker } from '../../contracts/IInventoryChecker';
-import { OrderCreated } from '../../domain/events/OrderCreated';
-import { IEventBus } from '../../../../shared/kernel/IEventBus';
-import { ReduceStockUseCase } from '../../../inventory/application/use-cases/ReduceStockUseCase';
+import { IUseCase } from '@/types';
+import { Order, OrderItem, OrderStatus } from '@/modules/order/domain/entities/order';
+import { Money } from '@/modules/inventory/domain/value-objects/Money';
+import { IOrderRepository } from '@/modules/order/domain/repositories/IOrderRepository';
+import { IInventoryChecker } from '@/modules/order/contracts/IInventoryChecker';
+import { OrderCreated } from '@/modules/order/domain/events/OrderCreated';
+import { IEventBus } from '@/shared/kernel/IEventBus';
+import { ReduceStockUseCase } from '@/modules/inventory/application/use-cases/ReduceStockUseCase';
 
 /**
  * Interface untuk input/request CreateOrderUseCase

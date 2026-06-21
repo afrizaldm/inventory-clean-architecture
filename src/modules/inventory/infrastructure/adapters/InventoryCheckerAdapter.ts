@@ -1,5 +1,5 @@
-import { IInventoryChecker } from '../../../order/contracts/IInventoryChecker';
-import { IProductRepository } from '../../domain/repositories/IProductRepository';
+import { IInventoryChecker } from '@/modules/order/contracts/IInventoryChecker';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
 
 /**
  * Adapter: InventoryCheckerAdapter

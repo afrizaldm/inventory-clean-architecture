@@ -5,9 +5,9 @@
 // Use Cases
 export { 
   CreateOrderUseCase, 
-  type CreateOrderCommand, 
-  type CreateOrderResult 
-} from './use-cases/create-order.use-case';
+  type CreateOrderRequest, 
+  type CreateOrderResponse 
+} from './use-cases/CreateOrderUseCase';
 
 // Services (Facades)
 // TODO: export { OrderApplicationService } from './services/order-application.service';

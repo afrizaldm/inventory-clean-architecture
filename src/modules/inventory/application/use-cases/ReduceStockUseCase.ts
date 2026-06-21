@@ -1,8 +1,8 @@
-import { IUseCase } from '../../../../types';
-import { Quantity } from '../../../../shared/kernel/value-objects';
-import { IProductRepository } from '../../domain/repositories/IProductRepository';
-import { ProductStockReduced } from '../../domain/events/ProductStockReduced';
-import { IEventBus } from '../../../../shared/kernel/IEventBus';
+import { IUseCase } from '@/types';
+import { Quantity } from '@/modules/inventory/domain/value-objects/Quantity';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
+import { ProductStockReduced } from '@/modules/inventory/domain/events/ProductStockReduced';
+import { IEventBus } from '@/shared/kernel/IEventBus';
 
 /**
  * Interface untuk input/request ReduceStockUseCase

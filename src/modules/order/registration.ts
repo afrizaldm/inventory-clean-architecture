@@ -1,7 +1,7 @@
-import { Container } from '../../bootstrap/container';
-import { IOrderRepository } from './domain/repositories/IOrderRepository';
-import { OrderRepository } from './infrastructure/repositories/OrderRepository';
-import { CreateOrderUseCase } from './application/use-cases/CreateOrderUseCase';
+import { Container } from '@/bootstrap/container';
+import { IOrderRepository } from '@/modules/order/domain/repositories/IOrderRepository';
+import { OrderRepository } from '@/modules/order/infrastructure/repositories/OrderRepository';
+import { CreateOrderUseCase } from '@/modules/order/application/use-cases/CreateOrderUseCase';
 
 /**
  * Registrasi Order Module Dependencies

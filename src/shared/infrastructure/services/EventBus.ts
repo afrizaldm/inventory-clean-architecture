@@ -1,5 +1,5 @@
-import { IEventBus } from '../../kernel/IEventBus';
-import { IEventHandler } from '../../../types';
+import { IEventBus } from '@/shared/kernel/IEventBus';
+import { IEventHandler } from '@/types';
 
 /**
  * Map untuk menyimpan list handler per event type

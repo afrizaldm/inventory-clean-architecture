@@ -1,4 +1,4 @@
-import { IOrderItem } from '../entities/Order';
+import { OrderItem } from '@/modules/order/domain/entities/order';
 
 /**
  * Interface untuk data yang diperlukan saat membuat event OrderCreated
@@ -9,7 +9,7 @@ export interface IOrderCreatedData {
   /** ID customer yang membuat order */
   customerId: string;
   /** List item yang diorder */
-  items: IOrderItem[];
+  items: OrderItem[];
   /** Total amount dalam satuan terkecil (sen) */
   totalAmount: number;
 }
@@ -33,7 +33,7 @@ export class OrderCreated {
   public readonly customerId: string;
   
   /** List item yang diorder */
-  public readonly items: IOrderItem[];
+  public readonly items: OrderItem[];
   
   /** Total amount dalam satuan terkecil */
   public readonly totalAmount: number;

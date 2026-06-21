@@ -20,18 +20,18 @@
 
 import express, { Request, Response } from 'express';
 import { Container } from './container';
-import { registerSharedDependencies } from '../shared/registration';
-import { registerInventoryModule } from '../modules/inventory/registration';
-import { registerOrderModule } from '../modules/order/registration';
-import { IEventBus } from '../shared/kernel/IEventBus';
-import { ILogger } from '../shared/infrastructure/services/Logger';
-import { ProductStockReducedHandler } from '../modules/inventory/infrastructure/event-handlers/ProductStockReducedHandler';
-import { OrderCreatedHandler } from '../modules/order/infrastructure/event-handlers/OrderCreatedHandler';
-import { ProductStockReduced } from '../modules/inventory/domain/events/ProductStockReduced';
-import { OrderCreated } from '../modules/order/domain/events/OrderCreated';
-import { CreateProductUseCase } from '../modules/inventory/application/use-cases/CreateProductUseCase';
-import { CreateOrderUseCase } from '../modules/order/application/use-cases/CreateOrderUseCase';
-import { IProductRepository } from '../modules/inventory/domain/repositories/IProductRepository';
+import { registerSharedDependencies } from '@/shared/registration';
+import { registerInventoryModule } from '@/modules/inventory/registration';
+import { registerOrderModule } from '@/modules/order/registration';
+import { IEventBus } from '@/shared/kernel/IEventBus';
+import { ILogger } from '@/shared/infrastructure/services/Logger';
+import { ProductStockReducedHandler } from '@/modules/inventory/infrastructure/event-handlers/ProductStockReducedHandler';
+import { OrderCreatedHandler } from '@/modules/order/infrastructure/event-handlers/OrderCreatedHandler';
+import { ProductStockReduced } from '@/modules/inventory/domain/events/ProductStockReduced';
+import { OrderCreated } from '@/modules/order/domain/events/OrderCreated';
+import { CreateProductUseCase } from '@/modules/inventory/application/use-cases/CreateProductUseCase';
+import { CreateOrderUseCase } from '@/modules/order/application/use-cases/CreateOrderUseCase';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
 
 // ============================================================================
 // STEP 1: CREATE CONTAINER
@@ -183,7 +183,7 @@ app.get('/products/:id', async (req: Request, res: Response) => {
     
     if (product) {
       res.json({
-        id: product['id'],
+        id: product.id,
         name: product.name,
         price: product.price.amount,
         stock: product.stock.toNumber()

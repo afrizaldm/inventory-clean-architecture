@@ -1,5 +1,5 @@
-import { IOrderRepository } from '../../domain/repositories/IOrderRepository';
-import { Order } from '../../domain/entities/Order';
+import { IOrderRepository } from '@/modules/order/domain/repositories/IOrderRepository';
+import { Order } from '@/modules/order/domain/entities/order';
 
 /**
  * In-memory storage untuk Order

@@ -7,15 +7,15 @@
 // Use Cases
 export { 
   CreateProductUseCase, 
-  type CreateProductCommand, 
-  type CreateProductResult 
-} from './use-cases/create-product.use-case';
+  type CreateProductRequest, 
+  type CreateProductResponse 
+} from './use-cases/CreateProductUseCase';
 
 export { 
   ReduceStockUseCase, 
-  type ReduceStockCommand, 
-  type ReduceStockResult 
-} from './use-cases/reduce-stock.use-case';
+  type ReduceStockRequest, 
+  type ReduceStockResponse 
+} from './use-cases/ReduceStockUseCase';
 
 // Services (Facades)
 // TODO: export { InventoryApplicationService } from './services/inventory-application.service';

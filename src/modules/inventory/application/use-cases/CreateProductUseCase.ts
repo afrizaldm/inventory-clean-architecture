@@ -1,8 +1,8 @@
-import { IUseCase } from '../../../../types';
-import { Product } from '../../domain/entities/product';
-import { Money } from '../../../../shared/kernel/value-objects';
-import { Quantity } from '../../../../shared/kernel/value-objects';
-import { IProductRepository } from '../../domain/repositories/IProductRepository';
+import { IUseCase } from '@/types';
+import { Product } from '@/modules/inventory/domain/entities/product';
+import { Money } from '@/modules/inventory/domain/value-objects/Money';
+import { Quantity } from '@/modules/inventory/domain/value-objects/Quantity';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
 
 /**
  * Interface untuk input/request CreateProductUseCase

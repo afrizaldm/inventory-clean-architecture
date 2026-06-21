@@ -1,10 +1,10 @@
-import { Container } from '../../bootstrap/container';
-import { IProductRepository } from './domain/repositories/IProductRepository';
-import { ProductRepository } from './infrastructure/repositories/ProductRepository';
-import { CreateProductUseCase } from './application/use-cases/CreateProductUseCase';
-import { ReduceStockUseCase } from './application/use-cases/ReduceStockUseCase';
-import { InventoryCheckerAdapter } from './infrastructure/adapters/InventoryCheckerAdapter';
-import { IInventoryChecker } from '../order/contracts/IInventoryChecker';
+import { Container } from '@/bootstrap/container';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
+import { ProductRepository } from '@/modules/inventory/infrastructure/repositories/ProductRepository';
+import { CreateProductUseCase } from '@/modules/inventory/application/use-cases/CreateProductUseCase';
+import { ReduceStockUseCase } from '@/modules/inventory/application/use-cases/ReduceStockUseCase';
+import { InventoryCheckerAdapter } from '@/modules/inventory/infrastructure/adapters/InventoryCheckerAdapter';
+import { IInventoryChecker } from '@/modules/order/contracts/IInventoryChecker';
 
 /**
  * Registrasi Inventory Module Dependencies

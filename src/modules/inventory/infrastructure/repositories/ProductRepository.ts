@@ -1,5 +1,5 @@
-import { IProductRepository } from '../../domain/repositories/IProductRepository';
-import { Product } from '../../domain/entities/Product';
+import { IProductRepository } from '@/modules/inventory/domain/repositories/IProductRepository';
+import { Product } from '@/modules/inventory/domain/entities/product';
 
 /**
  * In-memory storage untuk Product
@@ -60,5 +60,29 @@ export class ProductRepository implements IProductRepository {
   async update(product: Product): Promise<void> {
     // Update di Map (set ulang dengan key yang sama)
     productsStorage.set(product.id, product);
+  }
+
+  /**
+   * Mencari Product berdasarkan nama (case insensitive)
+   * @param name - Nama produk
+   * @returns Product jika ditemukan, null jika tidak
+   */
+  async findByName(name: string): Promise<Product | null> {
+    const lowerName = name.toLowerCase();
+    for (const product of productsStorage.values()) {
+      if (product.name.toLowerCase() === lowerName) {
+        return product;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Mengecek apakah Product dengan ID tertentu sudah ada
+   * @param id - ID unik produk
+   * @returns true jika ada, false jika tidak
+   */
+  async existsById(id: string): Promise<boolean> {
+    return productsStorage.has(id);
   }
 }
